@@ -125,6 +125,20 @@ td input.name-input { font-family: 'DM Sans', sans-serif; font-weight: 500; colo
 .hint { font-size: 11px; color: var(--text3); margin-top: 8px; }
 .dl-section { display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
 .dl-note { font-size: 12px; color: var(--text3); }
+
+/* ── Story tab ── */
+.story-meta { font-size: 12px; color: var(--text3); margin-bottom: 14px; }
+.story-body { display: flex; flex-direction: column; gap: 20px; }
+.story-section { border-left: 3px solid var(--blue-mid); padding-left: 16px; }
+.story-section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--blue); margin-bottom: 8px; opacity: 0.75; }
+.story-section-text { font-size: 14px; line-height: 1.75; color: var(--text); white-space: pre-wrap; outline: none; border: none; background: transparent; font-family: 'DM Sans', sans-serif; width: 100%; resize: none; min-height: 60px; }
+.story-section-text:focus { background: var(--blue-light); border-radius: 6px; padding: 6px 8px; margin: -6px -8px; }
+.story-pill { display: inline-block; background: var(--blue-light); color: var(--blue); font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 20px; margin-right: 6px; margin-bottom: 4px; }
+.story-pill.green  { background: #EAF3DE; color: #27500A; }
+.story-pill.red    { background: #FEF2F2; color: #991B1B; }
+.story-pill.amber  { background: #FFF2CC; color: #7D5900; }
+.story-headline { font-size: 19px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.story-sub { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
 </style>
 </head>
 <body>
@@ -155,6 +169,7 @@ td input.name-input { font-family: 'DM Sans', sans-serif; font-weight: 500; colo
   <button id="btn-mtbf"    onclick="showTab('mtbf')"    disabled>MTBF</button>
   <button id="btn-causes"  onclick="showTab('causes')"  disabled>Cause of Issue</button>
   <button id="btn-wow"     onclick="showTab('wow')"     disabled>WOW 24x7</button>
+  <button id="btn-story"  onclick="showTab('story')"  disabled>&#9998; Story</button>
 </div>
 
 <div class="container">
@@ -593,6 +608,32 @@ td input.name-input { font-family: 'DM Sans', sans-serif; font-weight: 500; colo
     </div>
   </div>
 
+  <!-- ── STORY TAB ── -->
+  <div id="tab-story" class="tab-pane">
+    <div id="story-empty" class="empty-state"><div class="ei">✍</div><p>Load data on the <strong>Data</strong> tab first.</p></div>
+    <div id="story-content" style="display:none">
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-header" style="margin-bottom:0">
+          <div>
+            <div class="story-headline" id="story-title"></div>
+            <div class="story-sub">Auto-generated from your data. Click any section to edit before presenting.</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0">
+            <button onclick="renderStory()">&#8635; Regenerate</button>
+            <button class="primary" onclick="copyStory()">&#9113; Copy all</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="story-body" id="story-body"></div>
+
+      <div class="card" style="margin-top:14px">
+        <div class="card-title">Talking points</div>
+        <div id="story-bullets" style="font-size:13px;line-height:1.9;color:var(--text2)"></div>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /container -->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -630,7 +671,7 @@ function norm(raw) {
 }
 
 // ── TABS ───────────────────────────────────────────────────────
-const TAB_ORDER = ['data','tickets','mttr','mtbf','causes','wow'];
+const TAB_ORDER = ['data','tickets','mttr','mtbf','causes','wow','story'];
 function showTab(id) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-nav button').forEach((b,i) => b.classList.toggle('active', TAB_ORDER[i] === id));
@@ -640,9 +681,10 @@ function showTab(id) {
   if (id === 'mtbf')    renderMTBF();
   if (id === 'causes')  renderCauses();
   if (id === 'wow')     renderWow();
+  if (id === 'story')   renderStory();
 }
 function enableTabs() {
-  ['tickets','mttr','mtbf','causes','wow'].forEach(id => { document.getElementById('btn-' + id).disabled = false; });
+  ['tickets','mttr','mtbf','causes','wow','story'].forEach(id => { document.getElementById('btn-' + id).disabled = false; });
   const dlAll = document.getElementById('btn-dl-all');
   dlAll.disabled = false; dlAll.style.opacity = '1'; dlAll.style.cursor = 'pointer';
 }
@@ -672,7 +714,7 @@ function clearData() {
   state.customers = [];
   localStorage.removeItem('qbr_state');
   document.getElementById('data-table-card').style.display = 'none';
-  ['tickets','mttr','mtbf','causes','wow'].forEach(id => { document.getElementById('btn-' + id).disabled = true; });
+  ['tickets','mttr','mtbf','causes','wow','story'].forEach(id => { document.getElementById('btn-' + id).disabled = true; });
   const dlAll = document.getElementById('btn-dl-all');
   dlAll.disabled = true; dlAll.style.opacity = '0.5'; dlAll.style.cursor = 'not-allowed';
   document.getElementById('save-status').textContent = '';
@@ -1551,6 +1593,205 @@ function downloadAllExcel() {
 
   const fname=`SeeTrue_QBR_${pq.replace(/\s/g,'_')}_vs_${cq.replace(/\s/g,'_')}.xlsx`;
   XLSX.writeFile(wb,fname);
+}
+
+// ── STORY / NARRATIVE ──────────────────────────────────────────
+function generateNarrative() {
+  const pq = state.prevQ, cq = state.currQ;
+  const cs = state.customers;
+  const tP = cs.reduce((s,c)=>s+c.prevTickets,0);
+  const tC = cs.reduce((s,c)=>s+c.currTickets,0);
+  const lanes = state.lanes;
+  const pctVol = tP > 0 ? Math.round((tC-tP)/tP*100) : null;
+  const tplP = lanes > 0 ? (tP/lanes).toFixed(2) : null;
+  const tplC = lanes > 0 ? (tC/lanes).toFixed(2) : null;
+
+  const byVolume = [...cs].sort((a,b)=>b.currTickets-a.currTickets);
+  const active = cs.filter(c=>c.prevTickets>0&&c.currTickets>0);
+  const newC = cs.filter(c=>c.prevTickets===0&&c.currTickets>0);
+  const exitC = cs.filter(c=>c.prevTickets>0&&c.currTickets===0);
+  const decliners = cs.filter(c=>c.currTickets<c.prevTickets&&c.prevTickets>0)
+    .sort((a,b)=>(a.currTickets/a.prevTickets)-(b.currTickets/b.prevTickets));
+
+  const topAbsGrower = [...active].sort((a,b)=>(b.currTickets-b.prevTickets)-(a.currTickets-a.prevTickets))[0];
+  const topPctGrower = [...active].sort((a,b)=>((b.currTickets-b.prevTickets)/b.prevTickets)-((a.currTickets-a.prevTickets)/a.prevTickets))[0];
+
+  const avgPMTTR = weightedAvg(cs,'prevMTTR','prevTickets');
+  const avgCMTTR = weightedAvg(cs,'currMTTR','currTickets');
+  const mttrPct = avgPMTTR&&avgCMTTR ? Math.round((avgCMTTR-avgPMTTR)/avgPMTTR*100) : null;
+
+  const avgPMTBF = weightedAvg(cs,'prevMTBF','prevTickets');
+  const avgCMTBF = weightedAvg(cs,'currMTBF','currTickets');
+  const mtbfPct = avgPMTBF&&avgCMTBF ? Math.round((avgCMTBF-avgPMTBF)/avgPMTBF*100) : null;
+
+  const causeMap = {};
+  cs.forEach(c=>Object.entries(c.currCauses||{}).forEach(([k,v])=>{ causeMap[k]=(causeMap[k]||0)+v; }));
+  const topCauses = Object.entries(causeMap).sort((a,b)=>b[1]-a[1]).slice(0,3);
+
+  const prevCauseMap = {};
+  cs.forEach(c=>Object.entries(c.prevCauses||{}).forEach(([k,v])=>{ prevCauseMap[k]=(prevCauseMap[k]||0)+v; }));
+
+  const totalPWow = cs.reduce((s,c)=>s+(c.prevWow?.total||0),0);
+  const totalCWow = cs.reduce((s,c)=>s+(c.currWow?.total||0),0);
+  const wowRatioC = tC>0 ? (totalCWow/tC*100).toFixed(1) : null;
+  const wowPct = totalPWow>0 ? Math.round((totalCWow-totalPWow)/totalPWow*100) : null;
+
+  const sections = [];
+
+  // ── 1. OVERVIEW ──
+  const volDir = pctVol>0 ? 'increased' : pctVol<0 ? 'decreased' : 'remained flat';
+  const volAdj = pctVol!=null ? (Math.abs(pctVol)>50?'significantly ':Math.abs(pctVol)>20?'notably ':'') : '';
+  let overview = `In ${cq}, the SeeTrue support team handled ${tC} ticket${tC!==1?'s':''} across ${cs.length} customer${cs.length!==1?'s':''}`;
+  if (pctVol!=null) overview += `, ${volAdj}${volDir} by ${Math.abs(pctVol)}% compared to ${tP} tickets in ${pq}`;
+  overview += '.';
+  if (tplC && tplP) {
+    const tplDir = parseFloat(tplC)>parseFloat(tplP) ? 'rising' : 'falling';
+    overview += `\n\nTickets per Lane (TPL) ${tplDir} from ${tplP} to ${tplC}, reflecting ${parseFloat(tplC)>parseFloat(tplP)?'higher':'lower'} support demand relative to the ${lanes}-lane customer base.`;
+  }
+  sections.push({ label:'Overview', text: overview });
+
+  // ── 2. CUSTOMER HIGHLIGHTS ──
+  let custText = '';
+  if (byVolume.length>0) {
+    const top = byVolume[0];
+    custText += `${top.name} led in ticket volume this quarter with ${top.currTickets} tickets`;
+    if (top.prevTickets>0) {
+      const d=top.currTickets-top.prevTickets, p=Math.round(d/top.prevTickets*100);
+      custText += ` (${d>0?'+':''}${d} from ${pq}, ${p>0?'+':''}${p}%)`;
+    }
+    custText += '.';
+  }
+  if (topAbsGrower && topAbsGrower.name !== byVolume[0]?.name) {
+    const d = topAbsGrower.currTickets-topAbsGrower.prevTickets;
+    const p = Math.round(d/topAbsGrower.prevTickets*100);
+    custText += `\n\nThe largest absolute growth came from ${topAbsGrower.name} (+${d} tickets, +${p}%), growing from ${topAbsGrower.prevTickets} to ${topAbsGrower.currTickets}.`;
+  }
+  if (topPctGrower && topPctGrower.name !== topAbsGrower?.name) {
+    const p = Math.round((topPctGrower.currTickets-topPctGrower.prevTickets)/topPctGrower.prevTickets*100);
+    custText += ` ${topPctGrower.name} saw the sharpest percentage increase at +${p}%.`;
+  }
+  if (decliners.length>0) {
+    const d = decliners[0];
+    const p = Math.abs(Math.round((d.currTickets-d.prevTickets)/d.prevTickets*100));
+    custText += `\n\nOn the positive side, ${d.name} reduced its ticket count by ${p}% (${d.prevTickets} → ${d.currTickets}), a sign of improving operational stability at that site.`;
+    if (decliners.length>1) custText += ` ${decliners.slice(1).map(c=>c.name).join(', ')} also saw reductions.`;
+  }
+  if (newC.length>0) custText += `\n\nNew this quarter: ${newC.map(c=>c.name+' ('+c.currTickets+' tickets)').join(', ')}.`;
+  if (exitC.length>0) custText += `\n\n${exitC.map(c=>c.name).join(' and ')} had no tickets in ${cq}, compared to ${exitC.map(c=>c.prevTickets+' in '+pq).join(' and ')}.`;
+  if (custText) sections.push({ label:'Customer highlights', text: custText.trim() });
+
+  // ── 3. SERVICE QUALITY ──
+  let sqText = '';
+  if (avgCMTTR!=null) {
+    if (mttrPct!=null) {
+      const dir = mttrPct<0 ? `improved by ${Math.abs(mttrPct)}%` : `increased by ${mttrPct}%`;
+      const meaning = mttrPct<0 ? 'The team is resolving tickets faster — a positive outcome reflecting strong support execution.' : 'Resolution times are taking longer — worth reviewing workload distribution and escalation paths.';
+      sqText += `Mean Time to Resolution (MTTR) ${dir} quarter-over-quarter. The weighted average moved from ${avgPMTTR.toFixed(1)} hours in ${pq} to ${avgCMTTR.toFixed(1)} hours in ${cq}. ${meaning}`;
+    } else {
+      sqText += `The weighted average MTTR in ${cq} was ${avgCMTTR.toFixed(1)} hours.`;
+    }
+  }
+  if (avgCMTBF!=null) {
+    if (sqText) sqText += '\n\n';
+    if (mtbfPct!=null) {
+      const dir = mtbfPct>0 ? `improved by ${mtbfPct}%` : `decreased by ${Math.abs(mtbfPct)}%`;
+      const meaning = mtbfPct>0 ? 'Customers are experiencing incidents less frequently, indicating improved system reliability.' : 'Incidents are occurring more frequently — this warrants a reliability review.';
+      sqText += `Mean Time Between Failures (MTBF) ${dir}. The weighted average moved from ${avgPMTBF.toFixed(1)} hours in ${pq} to ${avgCMTBF.toFixed(1)} hours in ${cq}. ${meaning}`;
+    } else {
+      sqText += `The weighted average MTBF in ${cq} was ${avgCMTBF.toFixed(1)} hours.`;
+    }
+  }
+  if (sqText) sections.push({ label:'Service quality', text: sqText.trim() });
+
+  // ── 4. ROOT CAUSES ──
+  if (topCauses.length>0) {
+    let causeText = `The top driver of support tickets in ${cq} was "${cap(topCauses[0][0])}" with ${topCauses[0][1]} occurrences`;
+    const prevTop = prevCauseMap[topCauses[0][0]] || 0;
+    if (prevTop>0) {
+      const dp = Math.round((topCauses[0][1]-prevTop)/prevTop*100);
+      causeText += ` (${dp>0?'+':''}${dp}% vs ${pq})`;
+    }
+    causeText += '.';
+    if (topCauses.length>1) {
+      causeText += ` This was followed by "${cap(topCauses[1][0])}" (${topCauses[1][1]} tickets)`;
+      if (topCauses.length>2) causeText += ` and "${cap(topCauses[2][0])}" (${topCauses[2][1]} tickets)`;
+      causeText += '.';
+    }
+    causeText += `\n\nAddressing "${cap(topCauses[0][0])}" root causes through product improvements or operational changes represents the highest-leverage opportunity to reduce overall ticket volume.`;
+    sections.push({ label:'Root causes', text: causeText });
+  }
+
+  // ── 5. WOW 24x7 ──
+  if (totalCWow>0||totalPWow>0) {
+    let wowText = `The WOW 24x7 external helpdesk handled ${totalCWow} ticket${totalCWow!==1?'s':''} in ${cq}`;
+    if (wowRatioC) wowText += `, representing ${wowRatioC}% of total support volume`;
+    if (wowPct!=null) {
+      wowText += `. This is ${wowPct>0?'up '+wowPct+'% from':'down '+Math.abs(wowPct)+'% from'} ${totalPWow} tickets in ${pq}`;
+    }
+    wowText += '.';
+    if (totalCWow>0) wowText += `\n\nThe WOW helpdesk continues to serve as a first-line buffer for after-hours and overflow support, ${parseFloat(wowRatioC||0)>20?'handling a substantial share of total volume — its contribution is meaningful to overall capacity.':'handling a portion of overall volume and extending coverage hours.'}`;
+    sections.push({ label:'WOW 24x7 helpdesk', text: wowText });
+  }
+
+  // ── 6. TALKING POINTS ──
+  const bullets = [];
+  if (pctVol!=null) {
+    if (pctVol>50) bullets.push({ text:`Ticket volume up ${pctVol}% — plan for continued capacity growth`, color:'red' });
+    else if (pctVol>0) bullets.push({ text:`Moderate growth of +${pctVol}% in ticket volume — within expected range`, color:'' });
+    else bullets.push({ text:`Ticket volume declined ${Math.abs(pctVol)}% — signals improved product/operational stability`, color:'green' });
+  }
+  if (topAbsGrower&&(topAbsGrower.currTickets-topAbsGrower.prevTickets)>0) bullets.push({ text:`${topAbsGrower.name}: biggest growth customer — worth a dedicated reliability review`, color:'amber' });
+  if (mttrPct!=null) {
+    if (mttrPct<0) bullets.push({ text:`MTTR improved ${Math.abs(mttrPct)}% — team is resolving faster`, color:'green' });
+    else if (mttrPct>20) bullets.push({ text:`MTTR up ${mttrPct}% — review escalation paths and workload`, color:'red' });
+  }
+  if (mtbfPct!=null) {
+    if (mtbfPct>0) bullets.push({ text:`MTBF up ${mtbfPct}% — fewer recurring incidents per customer`, color:'green' });
+    else bullets.push({ text:`MTBF down ${Math.abs(mtbfPct)}% — incidents recurring more frequently`, color:'red' });
+  }
+  if (topCauses.length>0) bullets.push({ text:`Top issue: "${cap(topCauses[0][0])}" — highest-impact area for preventative action`, color:'amber' });
+  if (decliners.length>0) bullets.push({ text:`${decliners.map(c=>c.name).join(', ')} reduced tickets — highlight as success stories`, color:'green' });
+  if (newC.length>0) bullets.push({ text:`New customer${newC.length>1?'s':''} onboarded: ${newC.map(c=>c.name).join(', ')}`, color:'' });
+
+  return { sections, bullets };
+}
+
+function renderStory() {
+  const has = state.customers.length > 0;
+  document.getElementById('story-empty').style.display   = has ? 'none'  : 'block';
+  document.getElementById('story-content').style.display = has ? 'block' : 'none';
+  if (!has) return;
+  const pq = state.prevQ, cq = state.currQ;
+  document.getElementById('story-title').textContent = `${pq} → ${cq} · Support Performance Narrative`;
+  const { sections, bullets } = generateNarrative();
+  const body = document.getElementById('story-body');
+  body.innerHTML = sections.map(s => `
+    <div class="card story-section">
+      <div class="story-section-label">${s.label}</div>
+      <textarea class="story-section-text" rows="${Math.max(3, Math.ceil(s.text.length/110))}" spellcheck="true">${esc(s.text)}</textarea>
+    </div>`).join('');
+  document.getElementById('story-bullets').innerHTML = bullets.map(b =>
+    `<div style="padding:3px 0">
+      <span class="story-pill ${b.color}">${b.color==='green'?'↑':b.color==='red'?'↓':b.color==='amber'?'⚠':''} ${b.text.split(' — ')[0]}</span>
+      ${b.text.includes(' — ') ? '<span style="color:var(--text3);font-size:12px">— '+b.text.split(' — ')[1]+'</span>' : ''}
+    </div>`
+  ).join('');
+}
+
+function copyStory() {
+  const textareas = document.querySelectorAll('#story-body .story-section-text');
+  const labels = document.querySelectorAll('#story-body .story-section-label');
+  let text = document.getElementById('story-title').textContent + '\n' + '='.repeat(50) + '\n\n';
+  labels.forEach((lbl, i) => {
+    text += lbl.textContent.toUpperCase() + '\n' + '-'.repeat(30) + '\n';
+    text += textareas[i].value.trim() + '\n\n';
+  });
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => btn.textContent = orig, 2000);
+  });
 }
 
 // ── INIT ───────────────────────────────────────────────────────
