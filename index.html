@@ -154,6 +154,7 @@ td input.name-input { font-family: 'DM Sans', sans-serif; font-weight: 500; colo
   <button id="btn-mttr"    onclick="showTab('mttr')"    disabled>MTTR</button>
   <button id="btn-mtbf"    onclick="showTab('mtbf')"    disabled>MTBF</button>
   <button id="btn-causes"  onclick="showTab('causes')"  disabled>Cause of Issue</button>
+  <button id="btn-wow"     onclick="showTab('wow')"     disabled>WOW 24x7</button>
 </div>
 
 <div class="container">
@@ -492,6 +493,106 @@ td input.name-input { font-family: 'DM Sans', sans-serif; font-weight: 500; colo
     </div>
   </div>
 
+  <!-- ── WOW 24x7 TAB ── -->
+  <div id="tab-wow" class="tab-pane">
+    <div id="wow-empty" class="empty-state"><div class="ei">🤝</div><p>Load data on the <strong>Data</strong> tab first.</p></div>
+    <div id="wow-content" style="display:none">
+      <details class="methodology">
+        <summary>How this is calculated</summary>
+        <div class="methodology-body">
+          <div class="method-item">
+            <div class="method-step">Step 1</div>
+            <div class="method-label">Identify WOW tickets</div>
+            <div class="method-formula">wow24x7_agent ≠ empty</div>
+            <div class="method-note">Any ticket where the wow24x7_agent column is populated is counted as a WOW 24x7 helpdesk ticket. The agent name is captured for the agent breakdown.</div>
+          </div>
+          <div class="method-arrow">→</div>
+          <div class="method-item">
+            <div class="method-step">Step 2</div>
+            <div class="method-label">Group by customer &amp; dimension</div>
+            <div class="method-formula">COUNT grouped by status / cause / agent</div>
+            <div class="method-note">WOW tickets are grouped per customer, then broken down by ticket status, cause of issue, and agent name. Tickets missing a dimension value are excluded from that breakdown only.</div>
+          </div>
+          <div class="method-arrow">→</div>
+          <div class="method-item">
+            <div class="method-step">Step 3</div>
+            <div class="method-label">QoQ comparison</div>
+            <div class="method-formula">(curr − prev) ÷ prev × 100</div>
+            <div class="method-note">WOW ticket volume is compared quarter-over-quarter. The WOW % column shows what share of a customer's total tickets were handled by the WOW helpdesk.</div>
+          </div>
+        </div>
+      </details>
+
+      <div class="kpi-bar" id="wow-kpi"></div>
+
+      <!-- Volume -->
+      <div class="card">
+        <div class="card-title">WOW 24x7 ticket volume</div>
+        <div class="table-wrap"><table>
+          <thead><tr id="wow-vol-thead"></tr></thead>
+          <tbody id="wow-vol-tbody"></tbody>
+          <tfoot><tr id="wow-vol-tfoot"></tr></tfoot>
+        </table></div>
+      </div>
+
+      <!-- Status breakdown -->
+      <div class="card">
+        <div class="card-title">Ticket status</div>
+        <div id="wow-status-warn" class="warn-box" style="display:none">⚠ No ticket status data found in CSVs for WOW tickets.</div>
+        <div class="table-wrap"><table>
+          <thead><tr id="wow-status-summary-thead"></tr></thead>
+          <tbody id="wow-status-summary-tbody"></tbody>
+          <tfoot><tr id="wow-status-summary-tfoot"></tr></tfoot>
+        </table></div>
+        <div class="section-header" style="margin-top:18px"><h2>Per customer</h2></div>
+        <div class="table-wrap"><table>
+          <thead><tr id="wow-status-detail-thead"></tr></thead>
+          <tbody id="wow-status-detail-tbody"></tbody>
+          <tfoot><tr id="wow-status-detail-tfoot"></tr></tfoot>
+        </table></div>
+      </div>
+
+      <!-- Cause breakdown -->
+      <div class="card">
+        <div class="card-title">Cause of issue</div>
+        <div id="wow-causes-warn" class="warn-box" style="display:none">⚠ No cause of issue data found in CSVs for WOW tickets.</div>
+        <div class="table-wrap"><table>
+          <thead><tr id="wow-causes-summary-thead"></tr></thead>
+          <tbody id="wow-causes-summary-tbody"></tbody>
+          <tfoot><tr id="wow-causes-summary-tfoot"></tr></tfoot>
+        </table></div>
+        <div class="section-header" style="margin-top:18px"><h2>Per customer</h2></div>
+        <div class="table-wrap"><table>
+          <thead><tr id="wow-causes-detail-thead"></tr></thead>
+          <tbody id="wow-causes-detail-tbody"></tbody>
+          <tfoot><tr id="wow-causes-detail-tfoot"></tr></tfoot>
+        </table></div>
+      </div>
+
+      <!-- Agent breakdown -->
+      <div class="card">
+        <div class="card-title">WOW agent</div>
+        <div id="wow-agents-warn" class="warn-box" style="display:none">⚠ No agent data found in CSVs for WOW tickets.</div>
+        <div class="table-wrap"><table>
+          <thead><tr id="wow-agents-summary-thead"></tr></thead>
+          <tbody id="wow-agents-summary-tbody"></tbody>
+          <tfoot><tr id="wow-agents-summary-tfoot"></tr></tfoot>
+        </table></div>
+        <div class="section-header" style="margin-top:18px"><h2>Per customer</h2></div>
+        <div class="table-wrap"><table>
+          <thead><tr id="wow-agents-detail-thead"></tr></thead>
+          <tbody id="wow-agents-detail-tbody"></tbody>
+          <tfoot><tr id="wow-agents-detail-tfoot"></tr></tfoot>
+        </table></div>
+      </div>
+
+      <div class="dl-section">
+        <button class="primary" onclick="downloadWowExcel()">&#8659; Download Excel</button>
+        <span class="dl-note" id="wow-dl-note"></span>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /container -->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -529,7 +630,7 @@ function norm(raw) {
 }
 
 // ── TABS ───────────────────────────────────────────────────────
-const TAB_ORDER = ['data','tickets','mttr','mtbf','causes'];
+const TAB_ORDER = ['data','tickets','mttr','mtbf','causes','wow'];
 function showTab(id) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-nav button').forEach((b,i) => b.classList.toggle('active', TAB_ORDER[i] === id));
@@ -538,9 +639,10 @@ function showTab(id) {
   if (id === 'mttr')    renderMTTR();
   if (id === 'mtbf')    renderMTBF();
   if (id === 'causes')  renderCauses();
+  if (id === 'wow')     renderWow();
 }
 function enableTabs() {
-  ['tickets','mttr','mtbf','causes'].forEach(id => { document.getElementById('btn-' + id).disabled = false; });
+  ['tickets','mttr','mtbf','causes','wow'].forEach(id => { document.getElementById('btn-' + id).disabled = false; });
   const dlAll = document.getElementById('btn-dl-all');
   dlAll.disabled = false; dlAll.style.opacity = '1'; dlAll.style.cursor = 'pointer';
 }
@@ -570,7 +672,7 @@ function clearData() {
   state.customers = [];
   localStorage.removeItem('qbr_state');
   document.getElementById('data-table-card').style.display = 'none';
-  ['tickets','mttr','mtbf','causes'].forEach(id => { document.getElementById('btn-' + id).disabled = true; });
+  ['tickets','mttr','mtbf','causes','wow'].forEach(id => { document.getElementById('btn-' + id).disabled = true; });
   const dlAll = document.getElementById('btn-dl-all');
   dlAll.disabled = true; dlAll.style.opacity = '0.5'; dlAll.style.cursor = 'not-allowed';
   document.getElementById('save-status').textContent = '';
@@ -599,7 +701,7 @@ setupDrop('drop-curr','fc','curr-fname','curr');
 
 // ── CSV PARSING ────────────────────────────────────────────────
 function processQuarter(data) {
-  const tickets={}, mttrA={}, mttrN={}, ticketDates={}, causes={}, products={}, versions={}, regions={};
+  const tickets={}, mttrA={}, mttrN={}, ticketDates={}, causes={}, products={}, versions={}, regions={}, wow={};
   (data||[]).forEach(r => {
     const name = norm(r.airport_code || r.organization);
     if (!name) return;
@@ -636,6 +738,17 @@ function processQuarter(data) {
     addDim(products, product);
     addDim(versions, version);
     addDim(regions,  region);
+
+    // WOW 24x7 — any ticket with a non-empty wow24x7_agent value
+    const wowAgent = String(r.wow24x7_agent || '').trim();
+    if (wowAgent) {
+      if (!wow[name]) wow[name] = { total: 0, status: {}, causes: {}, agents: {} };
+      wow[name].total++;
+      const wStatus = String(r.status || '').toLowerCase().trim();
+      if (wStatus) wow[name].status[wStatus] = (wow[name].status[wStatus]||0)+1;
+      if (cause)   wow[name].causes[cause]   = (wow[name].causes[cause]||0)+1;
+      wow[name].agents[wowAgent] = (wow[name].agents[wowAgent]||0)+1;
+    }
   });
 
   const mttr={}, mtbf={};
@@ -650,7 +763,7 @@ function processQuarter(data) {
     mtbf[n] = +((totalGap / (dates.length - 1)) / 3600000).toFixed(2); // ms → hours
   });
 
-  return { tickets, mttr, mtbf, causes, products, versions, regions };
+  return { tickets, mttr, mtbf, causes, products, versions, regions, wow };
 }
 
 function parseCSVs() {
@@ -673,6 +786,8 @@ function parseCSVs() {
     prevProduct: prev.products[n]||{}, currProduct: curr.products[n]||{},
     prevVersion: prev.versions[n]||{}, currVersion: curr.versions[n]||{},
     prevRegion:  prev.regions[n]||{},  currRegion:  curr.regions[n]||{},
+    prevWow: prev.wow[n] || { total: 0, status: {}, causes: {}, agents: {} },
+    currWow: curr.wow[n] || { total: 0, status: {}, causes: {}, agents: {} },
   })).sort((a,b) => b.currTickets - a.currTickets);
 
   document.getElementById('warn-box').innerHTML = unknown.size
@@ -681,7 +796,7 @@ function parseCSVs() {
 }
 
 function buildBlank() {
-  state.customers = [{ name:'Customer 1', prevTickets:0, currTickets:0, prevMTTR:null, currMTTR:null, prevMTBF:null, currMTBF:null, prevCauses:{}, currCauses:{}, prevProduct:{}, currProduct:{}, prevVersion:{}, currVersion:{}, prevRegion:{}, currRegion:{} }];
+  state.customers = [{ name:'Customer 1', prevTickets:0, currTickets:0, prevMTTR:null, currMTTR:null, prevMTBF:null, currMTBF:null, prevCauses:{}, currCauses:{}, prevProduct:{}, currProduct:{}, prevVersion:{}, currVersion:{}, prevRegion:{}, currRegion:{}, prevWow:{total:0,status:{},causes:{},agents:{}}, currWow:{total:0,status:{},causes:{},agents:{}} }];
   document.getElementById('warn-box').innerHTML = '';
   renderDataTable(); enableTabs();
 }
@@ -1135,6 +1250,162 @@ function downloadCausesExcel() {
   document.getElementById('causes-dl-note').textContent = fname + ' downloaded.';
 }
 
+// ── WOW 24x7 ──────────────────────────────────────────────────
+function renderWowDimension(dimKey, label, pq, cq) {
+  const warnEl = document.getElementById('wow-' + dimKey + '-warn');
+  const valSet = new Set();
+  state.customers.forEach(c => {
+    Object.keys(c.prevWow?.[dimKey] || {}).forEach(k => valSet.add(k));
+    Object.keys(c.currWow?.[dimKey] || {}).forEach(k => valSet.add(k));
+  });
+  const allVals = [...valSet].sort();
+  if (allVals.length === 0) { warnEl.style.display = 'block'; return; }
+  warnEl.style.display = 'none';
+  const totP = {}, totC = {};
+  allVals.forEach(v => {
+    totP[v] = state.customers.reduce((s,c) => s + (c.prevWow?.[dimKey]?.[v]||0), 0);
+    totC[v] = state.customers.reduce((s,c) => s + (c.currWow?.[dimKey]?.[v]||0), 0);
+  });
+  const sorted = [...allVals].sort((a,b) => (totC[b]||0) - (totC[a]||0));
+  const totalPWow = state.customers.reduce((s,c) => s + (c.prevWow?.total||0), 0);
+  const totalCWow = state.customers.reduce((s,c) => s + (c.currWow?.total||0), 0);
+
+  document.getElementById('wow-' + dimKey + '-summary-thead').innerHTML =
+    `<th style="text-align:left">${label}</th><th>${pq} Count</th><th>${cq} Count</th><th>% Change</th>`;
+  document.getElementById('wow-' + dimKey + '-summary-tbody').innerHTML = sorted.map(v => {
+    const p = totP[v]||0, c2 = totC[v]||0;
+    return `<tr><td style="font-weight:500">${cap(v)}</td><td class="mono">${p||'—'}</td><td class="mono">${c2||'—'}</td><td>${pctBadge(p,c2)}</td></tr>`;
+  }).join('');
+  document.getElementById('wow-' + dimKey + '-summary-tfoot').innerHTML =
+    `<td>Total WOW</td><td>${totalPWow}</td><td>${totalCWow}</td><td></td>`;
+
+  const custSorted = [...state.customers].sort((a,b) => (b.currWow?.total||0) - (a.currWow?.total||0));
+  document.getElementById('wow-' + dimKey + '-detail-thead').innerHTML =
+    `<th style="text-align:left;min-width:140px">Customer</th>` +
+    sorted.map(v => `<th>${cap(v)} ${pq}</th><th>${cap(v)} ${cq}</th>`).join('') +
+    `<th>Total WOW ${pq}</th><th>Total WOW ${cq}</th>`;
+  document.getElementById('wow-' + dimKey + '-detail-tbody').innerHTML = custSorted.map(c => {
+    const cols = sorted.map(v => {
+      const p = c.prevWow?.[dimKey]?.[v]||0, c2 = c.currWow?.[dimKey]?.[v]||0;
+      return `<td class="mono">${p||'—'}</td><td class="mono">${c2||'—'}</td>`;
+    }).join('');
+    return `<tr><td style="font-weight:500">${esc(c.name)}</td>${cols}<td class="mono">${c.prevWow?.total||'—'}</td><td class="mono">${c.currWow?.total||'—'}</td></tr>`;
+  }).join('');
+  document.getElementById('wow-' + dimKey + '-detail-tfoot').innerHTML =
+    `<td>Total</td>${sorted.map(v=>`<td>${totP[v]||'—'}</td><td>${totC[v]||'—'}</td>`).join('')}<td>${totalPWow}</td><td>${totalCWow}</td>`;
+}
+
+function renderWow() {
+  const has = state.customers.length > 0;
+  document.getElementById('wow-empty').style.display   = has ? 'none'  : 'block';
+  document.getElementById('wow-content').style.display = has ? 'block' : 'none';
+  if (!has) return;
+  const pq = state.prevQ, cq = state.currQ;
+  const totalPWow = state.customers.reduce((s,c) => s + (c.prevWow?.total||0), 0);
+  const totalCWow = state.customers.reduce((s,c) => s + (c.currWow?.total||0), 0);
+  const tP = state.customers.reduce((s,c) => s+c.prevTickets, 0);
+  const tC = state.customers.reduce((s,c) => s+c.currTickets, 0);
+  const pctNum = totalPWow > 0 ? Math.round((totalCWow - totalPWow) / totalPWow * 100) : null;
+  const pctStr = pctNum != null ? (pctNum > 0 ? '+' : '') + pctNum + '%' : '—';
+  const pctCol = pctNum != null ? (pctNum > 0 ? '#991B1B' : '#1D9E75') : 'var(--text2)';
+  const ratioP = tP > 0 ? (totalPWow / tP * 100).toFixed(1) + '%' : '—';
+  const ratioC = tC > 0 ? (totalCWow / tC * 100).toFixed(1) + '%' : '—';
+
+  document.getElementById('wow-kpi').innerHTML = `
+    <div class="kpi"><div class="kpi-label">WOW tickets ${pq}</div><div class="kpi-val">${totalPWow}</div></div>
+    <div class="kpi"><div class="kpi-label">WOW tickets ${cq}</div><div class="kpi-val">${totalCWow}</div></div>
+    <div class="kpi"><div class="kpi-label">QoQ change</div><div class="kpi-val" style="color:${pctCol}">${pctStr}</div></div>
+    <div class="kpi"><div class="kpi-label">% of all tickets (${cq})</div><div class="kpi-val tpl">${ratioC}</div></div>`;
+
+  // Volume per customer
+  document.getElementById('wow-vol-thead').innerHTML =
+    `<th style="text-align:left;min-width:140px">Customer</th>
+     <th>${pq} Total</th><th>${pq} WOW</th><th>${pq} WOW %</th>
+     <th>${cq} Total</th><th>${cq} WOW</th><th>${cq} WOW %</th>
+     <th>QoQ WOW</th>`;
+  const custSorted = [...state.customers].sort((a,b) => (b.currWow?.total||0) - (a.currWow?.total||0));
+  document.getElementById('wow-vol-tbody').innerHTML = custSorted.map(c => {
+    const pw = c.prevWow?.total||0, cw = c.currWow?.total||0;
+    const ratP = c.prevTickets > 0 ? (pw / c.prevTickets * 100).toFixed(1) + '%' : '—';
+    const ratC = c.currTickets > 0 ? (cw / c.currTickets * 100).toFixed(1) + '%' : '—';
+    return `<tr>
+      <td style="font-weight:500">${esc(c.name)}</td>
+      <td class="mono" style="color:var(--text2)">${c.prevTickets}</td><td class="mono">${pw||'—'}</td><td class="mono">${ratP}</td>
+      <td class="mono" style="color:var(--text2)">${c.currTickets}</td><td class="mono">${cw||'—'}</td><td class="mono">${ratC}</td>
+      <td>${pctBadge(pw, cw)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('wow-vol-tfoot').innerHTML =
+    `<td>Total</td><td>${tP}</td><td>${totalPWow}</td><td>${ratioP}</td><td>${tC}</td><td>${totalCWow}</td><td>${ratioC}</td><td>${pctStr}</td>`;
+
+  renderWowDimension('status', 'Ticket status', pq, cq);
+  renderWowDimension('causes', 'Cause of issue', pq, cq);
+  renderWowDimension('agents', 'WOW agent', pq, cq);
+}
+
+function downloadWowExcel() {
+  const pq = state.prevQ, cq = state.currQ;
+  const wb = XLSX.utils.book_new();
+  const tP = state.customers.reduce((s,c)=>s+c.prevTickets,0);
+  const tC = state.customers.reduce((s,c)=>s+c.currTickets,0);
+  const totalPWow = state.customers.reduce((s,c)=>s+(c.prevWow?.total||0),0);
+  const totalCWow = state.customers.reduce((s,c)=>s+(c.currWow?.total||0),0);
+  const custSorted = [...state.customers].sort((a,b)=>(b.currWow?.total||0)-(a.currWow?.total||0));
+  const ratioP = tP > 0 ? (totalPWow/tP*100).toFixed(1)+'%' : '—';
+  const ratioC = tC > 0 ? (totalCWow/tC*100).toFixed(1)+'%' : '—';
+
+  // Sheet 1: Volume
+  const volHdr = ['Customer', `${pq} Total`, `${pq} WOW`, `${pq} WOW %`, `${cq} Total`, `${cq} WOW`, `${cq} WOW %`, 'QoQ WOW'];
+  const volRows = custSorted.map(c => {
+    const pw = c.prevWow?.total||0, cw = c.currWow?.total||0;
+    const ratP2 = c.prevTickets > 0 ? (pw/c.prevTickets*100).toFixed(1)+'%' : '—';
+    const ratC2 = c.currTickets > 0 ? (cw/c.currTickets*100).toFixed(1)+'%' : '—';
+    const pct = pw===0&&cw>0?'NEW':cw===0&&pw>0?'EXITED':pw>0?(cw>pw?'+':'')+Math.round((cw-pw)/pw*100)+'%':'—';
+    return [c.name, c.prevTickets, pw, ratP2, c.currTickets, cw, ratC2, pct];
+  });
+  volRows.push(['Total', tP, totalPWow, ratioP, tC, totalCWow, ratioC, '']);
+  const volWs = XLSX.utils.aoa_to_sheet([volHdr, ...volRows]);
+  volWs['!cols'] = [22,12,12,12,12,12,12,12].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, volWs, 'WOW Volume');
+
+  // Sheets 2-4: Status, Causes, Agents
+  const wowDims = [
+    { key:'status', sheet:'WOW Status' },
+    { key:'causes', sheet:'WOW Causes' },
+    { key:'agents', sheet:'WOW Agents' },
+  ];
+  wowDims.forEach(d => {
+    const valSet = new Set();
+    state.customers.forEach(c => {
+      Object.keys(c.prevWow?.[d.key]||{}).forEach(k=>valSet.add(k));
+      Object.keys(c.currWow?.[d.key]||{}).forEach(k=>valSet.add(k));
+    });
+    if (valSet.size === 0) return;
+    const allVals = [...valSet].sort();
+    const totP = {}, totC = {};
+    allVals.forEach(v => {
+      totP[v] = state.customers.reduce((s,c)=>s+(c.prevWow?.[d.key]?.[v]||0),0);
+      totC[v] = state.customers.reduce((s,c)=>s+(c.currWow?.[d.key]?.[v]||0),0);
+    });
+    const sorted = [...allVals].sort((a,b)=>(totC[b]||0)-(totC[a]||0));
+
+    const shdr = [d.sheet, `${pq} Count`, `${cq} Count`, '% Change'];
+    const srows = sorted.map(v => {
+      const p=totP[v]||0, c2=totC[v]||0;
+      const pct = p>0?(c2>p?'+':'')+Math.round((c2-p)/p*100)+'%':c2>0?'NEW':'—';
+      return [cap(v), p, c2, pct];
+    });
+    srows.push(['Total WOW', totalPWow, totalCWow, '']);
+    const ws = XLSX.utils.aoa_to_sheet([shdr, ...srows]);
+    ws['!cols'] = [26,14,14,12].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb, ws, d.sheet);
+  });
+
+  const fname = `WOW24x7_${pq.replace(/\s/g,'_')}_vs_${cq.replace(/\s/g,'_')}.xlsx`;
+  XLSX.writeFile(wb, fname);
+  document.getElementById('wow-dl-note').textContent = fname + ' downloaded.';
+}
+
 // ── DOWNLOAD ALL ───────────────────────────────────────────────
 function downloadAllExcel() {
   const pq=state.prevQ, cq=state.currQ, lanes=state.lanes;
@@ -1237,6 +1508,45 @@ function downloadAllExcel() {
     const ws2=XLSX.utils.aoa_to_sheet([sh2,...sr2]);
     ws2['!cols']=[22,...sorted.flatMap(()=>[12,12]),12,12].map(w=>({wch:w}));
     XLSX.utils.book_append_sheet(wb,ws2,d.sheet+' Per Customer');
+  });
+
+  // ── WOW 24x7 sheets ──
+  const wowTotalP=custSorted.reduce((s,c)=>s+(c.prevWow?.total||0),0);
+  const wowTotalC=custSorted.reduce((s,c)=>s+(c.currWow?.total||0),0);
+  const wowRatioP=tP>0?(wowTotalP/tP*100).toFixed(1)+'%':'—';
+  const wowRatioC=tC>0?(wowTotalC/tC*100).toFixed(1)+'%':'—';
+
+  // WOW Volume sheet
+  const wvHdr=['Customer',`${pq} Total`,`${pq} WOW`,`${pq} WOW %`,`${cq} Total`,`${cq} WOW`,`${cq} WOW %`,'QoQ WOW'];
+  const wvRows=custSorted.map(c=>{
+    const pw=c.prevWow?.total||0, cw=c.currWow?.total||0;
+    const rP=c.prevTickets>0?(pw/c.prevTickets*100).toFixed(1)+'%':'—';
+    const rC=c.currTickets>0?(cw/c.currTickets*100).toFixed(1)+'%':'—';
+    const pct=pw===0&&cw>0?'NEW':cw===0&&pw>0?'EXITED':pw>0?(cw>pw?'+':'')+Math.round((cw-pw)/pw*100)+'%':'—';
+    return [c.name,c.prevTickets,pw,rP,c.currTickets,cw,rC,pct];
+  });
+  wvRows.push(['Total',tP,wowTotalP,wowRatioP,tC,wowTotalC,wowRatioC,'']);
+  const wvWs=XLSX.utils.aoa_to_sheet([wvHdr,...wvRows]);
+  wvWs['!cols']=[22,12,12,12,12,12,12,12].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,wvWs,'WOW Volume');
+
+  // WOW dimension sheets
+  [{key:'status',sheet:'WOW Status'},{key:'causes',sheet:'WOW Causes'},{key:'agents',sheet:'WOW Agents'}].forEach(d=>{
+    const vs=new Set();
+    custSorted.forEach(c=>{
+      Object.keys(c.prevWow?.[d.key]||{}).forEach(k=>vs.add(k));
+      Object.keys(c.currWow?.[d.key]||{}).forEach(k=>vs.add(k));
+    });
+    if(!vs.size) return;
+    const av=[...vs].sort(), tpd={}, tcd={};
+    av.forEach(v=>{ tpd[v]=custSorted.reduce((s,c)=>s+(c.prevWow?.[d.key]?.[v]||0),0); tcd[v]=custSorted.reduce((s,c)=>s+(c.currWow?.[d.key]?.[v]||0),0); });
+    const sv=[...av].sort((a,b)=>(tcd[b]||0)-(tcd[a]||0));
+    const sh=[d.sheet,`${pq} Count`,`${cq} Count`,'% Change'];
+    const sr=sv.map(v=>{ const p=tpd[v]||0,c2=tcd[v]||0; return [cap(v),p,c2,p>0?(c2>p?'+':'')+Math.round((c2-p)/p*100)+'%':c2>0?'NEW':'—']; });
+    sr.push(['Total WOW',wowTotalP,wowTotalC,'']);
+    const ws=XLSX.utils.aoa_to_sheet([sh,...sr]);
+    ws['!cols']=[26,14,14,12].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb,ws,d.sheet);
   });
 
   const fname=`SeeTrue_QBR_${pq.replace(/\s/g,'_')}_vs_${cq.replace(/\s/g,'_')}.xlsx`;
