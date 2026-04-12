@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SeeTrue QBR</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #F4F3EF; --surface: #FFFFFF; --surface2: #F0EEE8;
+  --border: #E2DED6; --border2: #C8C3B8;
+  --text: #1A1917; --text2: #6B6760; --text3: #A09C97;
+  --blue: #1B4F8A; --blue-light: #E8EFF8; --blue-mid: #9DC3E6;
+  --header-bg: #1B3A5C; --header-text: #E8EFF8;
+  --tpl: #0F6E56;
+  --new-bg: #EAF3DE; --new-text: #27500A;
+  --exit-bg: #FFF2CC; --exit-text: #7D5900;
+  --warn-bg: #FEF9EC; --warn-border: #F0C94A;
+  --radius: 10px; --radius-sm: 6px;
+}
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; line-height: 1.6; }
+
+header { background: var(--header-bg); padding: 14px 40px; display: flex; align-items: center; justify-content: space-between; }
+.logo { display: flex; align-items: center; gap: 12px; }
+.logo-mark { width: 30px; height: 30px; border: 2px solid #9DC3E6; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+.logo-mark svg { width: 16px; height: 16px; }
+header h1 { font-size: 15px; font-weight: 500; color: var(--header-text); }
+header .subtitle { font-size: 11px; color: #7A9BBF; }
+#save-status { font-size: 12px; color: #7A9BBF; }
+
+.tab-nav { background: var(--header-bg); border-top: 1px solid rgba(255,255,255,0.07); padding: 0 36px; display: flex; gap: 2px; }
+.tab-nav button { font-family: inherit; font-size: 13px; font-weight: 500; color: #7A9BBF; background: none; border: none; border-bottom: 2px solid transparent; padding: 9px 16px; cursor: pointer; transition: all 0.15s; }
+.tab-nav button:hover { color: var(--header-text); }
+.tab-nav button.active { color: var(--header-text); border-bottom-color: #9DC3E6; }
+.tab-nav button:disabled { color: #3D5978; cursor: not-allowed; }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
+.tab-pane { display: none; } .tab-pane.active { display: block; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 26px; margin-bottom: 18px; }
+.card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text2); margin-bottom: 16px; }
+
+.config-grid { display: grid; grid-template-columns: 1fr 1fr 160px; gap: 16px; }
+label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 5px; letter-spacing: 0.03em; }
+input[type=text], input[type=number] { width: 100%; padding: 8px 11px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; font-size: 14px; color: var(--text); background: var(--surface); transition: border-color 0.15s; outline: none; }
+input[type=text]:focus, input[type=number]:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(27,79,138,0.1); }
+.lanes-input { background: #FFFBEC !important; border-color: #F0C94A !important; font-weight: 500; }
+
+.upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 4px; }
+.drop-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius); padding: 18px 14px; text-align: center; cursor: pointer; transition: all 0.15s; background: var(--surface2); }
+.drop-zone:hover, .drop-zone.over { border-color: var(--blue); background: var(--blue-light); }
+.drop-zone.done { border-color: #1D9E75; border-style: solid; background: #F0FAF6; }
+.drop-icon { width: 32px; height: 32px; background: var(--blue-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-size: 15px; }
+.drop-zone.done .drop-icon { background: #E1F5EE; }
+.drop-label { font-size: 13px; font-weight: 500; }
+.drop-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+input[type=file] { display: none; }
+
+.btn-group { display: flex; gap: 10px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.divider { font-size: 12px; color: var(--text3); }
+
+button { font-family: inherit; font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s; outline: none; border: 1px solid var(--border2); background: var(--surface); color: var(--text); }
+button:hover { background: var(--surface2); }
+button:active { transform: scale(0.98); }
+button.primary { background: var(--header-bg); color: #fff; border-color: var(--header-bg); }
+button.primary:hover { background: #152E4A; }
+button.success { background: #0F6E56; color: #fff; border-color: #0F6E56; }
+button.success:hover { background: #0a5444; }
+button.danger { background: #FEF2F2; color: #991B1B; border-color: #FECACA; }
+button.sm { font-size: 11px; padding: 3px 8px; }
+
+.error { background: #FEF2F2; border: 1px solid #FECACA; border-radius: var(--radius-sm); padding: 9px 13px; font-size: 13px; color: #991B1B; margin-top: 10px; }
+.warn-box { background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: var(--radius-sm); padding: 9px 13px; font-size: 12px; color: #7D5900; margin-bottom: 14px; }
+
+details.methodology { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 18px; }
+details.methodology summary { padding: 12px 18px; font-size: 12px; font-weight: 600; color: var(--text2); cursor: pointer; letter-spacing: 0.03em; list-style: none; display: flex; align-items: center; gap: 8px; user-select: none; }
+details.methodology summary::before { content: '▶'; font-size: 9px; color: var(--text3); transition: transform 0.15s; }
+details.methodology[open] summary::before { transform: rotate(90deg); }
+details.methodology summary::-webkit-details-marker { display: none; }
+.methodology-body { padding: 0 18px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.method-item { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px 14px; flex: 1 1 200px; position: relative; }
+.method-step { font-size: 10px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; opacity: 0.7; }
+.method-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
+.method-formula { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--blue); margin-bottom: 4px; }
+.method-note { font-size: 11px; color: var(--text3); }
+.method-arrow { font-size: 18px; color: var(--text3); flex-shrink: 0; align-self: center; padding: 0 2px; }
+
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 10px; flex-wrap: wrap; }
+.section-header h2 { font-size: 15px; font-weight: 500; }
+
+.table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { background: var(--header-bg); color: var(--header-text); font-weight: 500; font-size: 11px; padding: 10px 12px; text-align: center; white-space: nowrap; letter-spacing: 0.02em; }
+thead th:first-child { text-align: left; }
+tbody td { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: center; vertical-align: middle; }
+tbody td:first-child { text-align: left; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:nth-child(even) td { background: #FAFAF8; }
+tbody tr:hover td { background: var(--blue-light); }
+tfoot td { padding: 9px 12px; background: #1B3A5C !important; color: #E8EFF8; font-weight: 500; font-size: 13px; text-align: center; }
+tfoot td:first-child { text-align: left; }
+
+td input[type=text], td input[type=number] { border: none; background: transparent; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--blue); font-weight: 500; text-align: center; width: 72px; padding: 2px 4px; border-radius: 4px; outline: none; }
+td input[type=text]:focus, td input[type=number]:focus { background: var(--blue-light); }
+td input.name-input { font-family: 'DM Sans', sans-serif; font-weight: 500; color: var(--text); text-align: left; width: 140px; }
+
+.mono { font-family: 'DM Mono', monospace; }
+.tpl-val { font-family: 'DM Mono', monospace; color: var(--tpl); font-weight: 500; }
+.tpl-val.dim { color: var(--text3); }
+.badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px; letter-spacing: 0.05em; text-transform: uppercase; }
+.badge.new { background: var(--new-bg); color: var(--new-text); }
+.badge.exited { background: var(--exit-bg); color: var(--exit-text); }
+
+.kpi-bar { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-bottom: 18px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.kpi-label { font-size: 10px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+.kpi-val { font-size: 24px; font-weight: 600; font-family: 'DM Mono', monospace; color: var(--text); }
+.kpi-val.tpl { color: var(--tpl); }
+
+.empty-state { text-align: center; padding: 64px 20px; color: var(--text3); }
+.empty-state .ei { font-size: 32px; margin-bottom: 10px; }
+.empty-state p { font-size: 14px; }
+
+.hint { font-size: 11px; color: var(--text3); margin-top: 8px; }
+.dl-section { display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
+.dl-note { font-size: 12px; color: var(--text3); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 18 18" fill="none"><polygon points="9,2 16,6 16,12 9,16 2,12 2,6" stroke="#9DC3E6" stroke-width="1.5" fill="none"/><line x1="9" y1="2" x2="9" y2="16" stroke="#9DC3E6" stroke-width="1"/><line x1="2" y1="6" x2="16" y2="12" stroke="#9DC3E6" stroke-width="1"/><line x1="16" y1="6" x2="2" y2="12" stroke="#9DC3E6" stroke-width="1"/></svg>
+    </div>
+    <div>
+      <h1>SeeTrue QBR</h1>
+      <div class="subtitle">Quarterly Business Review</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div id="save-status"></div>
+    <button id="btn-dl-all" onclick="downloadAllExcel()" disabled
+      style="background:#1D9E75;color:#fff;border-color:#1D9E75;font-size:12px;padding:6px 14px;opacity:0.5;cursor:not-allowed">
+      &#8659; Download All
+    </button>
+  </div>
+</header>
+
+<div class="tab-nav">
+  <button class="active" onclick="showTab('data')">Data</button>
+  <button id="btn-tickets" onclick="showTab('tickets')" disabled>Ticket Volume</button>
+  <button id="btn-mttr"    onclick="showTab('mttr')"    disabled>MTTR</button>
+  <button id="btn-mtbf"    onclick="showTab('mtbf')"    disabled>MTBF</button>
+  <button id="btn-causes"  onclick="showTab('causes')"  disabled>Cause of Issue</button>
+</div>
+
+<div class="container">
+
+  <!-- ── DATA TAB ── -->
+  <div id="tab-data" class="tab-pane active">
+    <div class="card">
+      <div class="card-title">Report settings</div>
+      <div class="config-grid">
+        <div><label>Previous quarter</label><input type="text" id="prev-q" value="Q4 2025" oninput="state.prevQ=this.value"></div>
+        <div><label>Current quarter</label><input type="text"  id="curr-q" value="Q1 2026" oninput="state.currQ=this.value"></div>
+        <div><label>Total lanes ⚠</label><input type="number" id="lanes"  value="200" min="1" class="lanes-input" oninput="state.lanes=+this.value||200"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Upload CSVs</div>
+      <div class="upload-grid">
+        <div>
+          <label>Previous quarter CSV</label>
+          <div class="drop-zone" id="drop-prev" onclick="document.getElementById('fp').click()">
+            <div class="drop-icon">↑</div>
+            <div class="drop-label" id="prev-fname">Drop or click to upload</div>
+            <div class="drop-sub">airport_code + ticket_id required</div>
+          </div>
+          <input type="file" id="fp" accept=".csv">
+        </div>
+        <div>
+          <label>Current quarter CSV</label>
+          <div class="drop-zone" id="drop-curr" onclick="document.getElementById('fc').click()">
+            <div class="drop-icon">↑</div>
+            <div class="drop-label" id="curr-fname">Drop or click to upload</div>
+            <div class="drop-sub">airport_code + ticket_id required</div>
+          </div>
+          <input type="file" id="fc" accept=".csv">
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="primary" onclick="parseCSVs()">Parse CSVs</button>
+        <span class="divider">— or —</span>
+        <button onclick="buildBlank()">Start with empty table</button>
+      </div>
+      <div id="upload-err"></div>
+    </div>
+
+    <div id="warn-box"></div>
+
+    <div class="card" id="data-table-card" style="display:none">
+      <div class="section-header">
+        <h2>Customer data</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="addRow()">+ Add row</button>
+          <button class="success" onclick="saveToStorage()">&#10003; Save</button>
+          <button class="danger" onclick="clearData()">Clear all</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:left;min-width:140px">Customer</th>
+              <th id="dh-pt">Prev Tickets</th>
+              <th id="dh-ct">Curr Tickets</th>
+              <th>% Change</th>
+              <th style="width:36px"></th>
+            </tr>
+          </thead>
+          <tbody id="data-tbody"></tbody>
+          <tfoot><tr id="data-tfoot"></tr></tfoot>
+        </table>
+      </div>
+      <div class="hint">Ticket counts are editable — % change and totals update live. MTTR / MTBF are computed from CSVs and available on their report tabs. Click Save to persist between sessions.</div>
+    </div>
+  </div>
+
+  <!-- ── TICKET VOLUME TAB ── -->
+  <div id="tab-tickets" class="tab-pane">
+    <div id="tickets-empty" class="empty-state"><div class="ei">📊</div><p>Load data on the <strong>Data</strong> tab first.</p></div>
+    <div id="tickets-content" style="display:none">
+      <details class="methodology">
+        <summary>How this is calculated</summary>
+        <div class="methodology-body">
+          <div class="method-item">
+            <div class="method-step">Step 1</div>
+            <div class="method-label">Ticket count</div>
+            <div class="method-formula">COUNT(tickets) per customer</div>
+            <div class="method-note">Station-level airport codes are grouped into top-level customer names before counting.</div>
+          </div>
+          <div class="method-arrow">→</div>
+          <div class="method-item">
+            <div class="method-step">Step 2</div>
+            <div class="method-label">TPL — Tickets per Lane</div>
+            <div class="method-formula">tickets ÷ total lanes</div>
+            <div class="method-note">Total lanes is configurable (default 200). Normalises volume across different site sizes.</div>
+          </div>
+          <div class="method-arrow">→</div>
+          <div class="method-item">
+            <div class="method-step">Step 3</div>
+            <div class="method-label">% Change (QoQ)</div>
+            <div class="method-formula">(curr − prev) ÷ prev × 100</div>
+            <div class="method-note">NEW = 0 tickets previous quarter. EXITED = 0 tickets current quarter.</div>
+          </div>
+        </div>
+      </details>
+      <div class="kpi-bar" id="tickets-kpi"></div>
+      <div class="card">
+        <div class="card-title">Summary</div>
+        <div class="table-wrap"><table>
+          <thead><tr>
+            <th style="text-align:left">Customer</th>
+            <th id="tsh-p">Prev Tickets</th><th id="tsh-c">Curr Tickets</th>
+            <th>Total Lanes</th><th id="tsh-tp">TPL Prev</th><th id="tsh-tc">TPL Curr</th>
+            <th>% Change</th>
+          </tr></thead>
+          <tbody><tr>
+            <td style="font-weight:500">Total</td>
+            <td id="ts-p">—</td><td id="ts-c">—</td><td id="ts-l">—</td>
+            <td id="ts-tp">—</td><td id="ts-tc">—</td><td id="ts-pct">—</td>
+          </tr></tbody>
+        </table></div>
+        <div class="hint">TPL = Tickets per Lane</div>
+      </div>
+      <div class="card">
+        <div class="section-header"><h2>Per customer breakdown</h2></div>
+        <div class="table-wrap"><table>
+          <thead><tr id="tickets-thead"></tr></thead>
+          <tbody id="tickets-tbody"></tbody>
+          <tfoot><tr id="tickets-tfoot"></tr></tfoot>
+        </table></div>
+        <div class="dl-section">
+          <button class="primary" onclick="downloadTicketsExcel()">&#8659; Download Excel</button>
+          <span class="dl-note" id="tickets-dl-note"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MTTR TAB ── -->
+  <div id="tab-mttr" class="tab-pane">
+    <div id="mttr-empty" class="empty-state"><div class="ei">⏱</div><p>Load data on the <strong>Data</strong> tab first.</p></div>
+    <div id="mttr-content" style="display:none">
+      <details class="methodology">
+        <summary>How this is calculated</summary>
+        <div class="methodology-body">
+          <div class="method-item">
+            <div class="method-step">Step 1</div>
+            <div class="method-label">Per-ticket MTTR</div>
+            <div class="method-formula">solved_timestamp − created_at_dt</div>
+            <div class="method-note">Computed in hours from raw timestamps. Falls back to Zendesk's pre-calculated MTTR column if timestamps are unavailable. Only resolved tickets are included.</div>
+          </div>
+          <div class="method-arrow">→</div>
+          <div class="method-item">
+            <div class="method-step">Step 2</div>
+            <div class="method-label">Per-customer MTTR</div>
+            <div class="method-formula">Σ(ticket MTTR) ÷ resolved tickets</div>
+            <div class="method-note">Arithmetic mean of all resolved ticket MTTRs for that customer in the quarter.</div>
+          </div>
+          <div class="method-arrow">→</div>
+          <div class="method-item">
+            <div class="method-step">Step 3</div>
+            <div class="method-label">Weighted average (footer)</div>
+            <div class="method-formula">Σ(MTTR × tickets) ÷ Σ(tickets)</div>
+            <div class="method-note">High-volume customers contribute proportionally more to the overall figure. Lower is better.</div>
+          </div>
+        </div>
+      </details>
+      <div class="kpi-bar" id="mttr-kpi"></div>
+      <div class="card">
+        <div class="section-header"><h2>MTTR per customer</h2></div>
+        <div id="mttr-warn" class="warn-box" style="display:none">⚠ No MTTR data found in CSVs. Enter values manually on the Data tab.</div>
+        <div class="table-wrap"><table>
+          <thead><tr id="mttr-thead"></tr></thead>
+          <tbody id="mttr-tbody"></tbody>
+          <tfoot><tr id="mttr-tfoot"></tr></tfoot>
+        </table></div>
+        <div class="hint">MTTR = Mean Time To Resolution (hours). Lower is better.</div>
+        <div class="dl-section">
+          <button class="primary" onclick="downloadMTTRExcel()">&#8659; Download Excel</button>
+          <span class="dl-note" id="mttr-dl-note"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MTBF TAB ── -->
+  <div id="tab-mtbf" class="tab-pane">
+    <div id="mtbf-empty" class="empty-state"><div class="ei">🔄</div><p>Load data on the <strong>Data</strong> tab first.</p></div>
+    <div id="mtbf-content" style="display:none">
+      <details class="methodology">
+        <summary>How this is calculated</summary>
+        <div class="methodology-body">
+          <div class="method-item">
+            <div class="method-step">Step 1</div>
+            <div class="method-label">Sort tickets by date</div>
+            <div class="method-formula">tickets → ordered by created_at</div>
+            <div class="method-note">All tickets for a customer are sorted chronologically by their creation timestamp.</div>
+          </div>
+          <div class="method-arrow">→</div>
+          <div class="method-item">
+            <div class="method-step">Step 2</div>
+            <div class="method-label">Gap between consecutive tickets</div>
+            <div class="method-formula">T(next) − T(prev) per pair</div>
+            <div class="method-note">The time between each pair of consecutive tickets is calculated in hours. Requires 2+ tickets — customers with only 1 ticket show no MTBF.</div>
+          </div>
+          <div class="method-arrow">→</div>
+          <div class="method-item">
+            <div class="method-step">Step 3</div>
+            <div class="method-label">Average the gaps</div>
+            <div class="method-formula">Σ(gaps) ÷ (tickets − 1)</div>
+            <div class="method-note">The average gap across all consecutive ticket pairs gives the MTBF for that customer. Higher is better — longer gaps mean fewer failures.</div>
+          </div>
+        </div>
+      </details>
+      <div class="kpi-bar" id="mtbf-kpi"></div>
+      <div class="card">
+        <div class="section-header"><h2>MTBF per customer</h2></div>
+        <div id="mtbf-warn" class="warn-box" style="display:none">⚠ No MTBF data could be calculated — tickets may be missing creation timestamps, or each customer has only 1 ticket.</div>
+        <div class="table-wrap"><table>
+          <thead><tr id="mtbf-thead"></tr></thead>
+          <tbody id="mtbf-tbody"></tbody>
+          <tfoot><tr id="mtbf-tfoot"></tr></tfoot>
+        </table></div>
+        <div class="hint">MTBF = Mean Time Between Failures (hours). Higher is better.</div>
+        <div class="dl-section">
+          <button class="primary" onclick="downloadMTBFExcel()">&#8659; Download Excel</button>
+          <span class="dl-note" id="mtbf-dl-note"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CAUSE OF ISSUE TAB ── -->
+  <div id="tab-causes" class="tab-pane">
+    <div id="causes-empty" class="empty-state"><div class="ei">🔍</div><p>Load data on the <strong>Data</strong> tab first.</p></div>
+    <div id="causes-content" style="display:none">
+      <details class="methodology">
+        <summary>How this is calculated</summary>
+        <div class="methodology-body">
+          <div class="method-item">
+            <div class="method-step">Step 1</div>
+            <div class="method-label">Read dimension fields</div>
+            <div class="method-formula">cause_of_issue, product, version, region</div>
+            <div class="method-note">Each ticket is tagged with values for each dimension. Tickets missing a value for a given dimension are excluded from that breakdown only.</div>
+          </div>
+          <div class="method-arrow">→</div>
+          <div class="method-item">
+            <div class="method-step">Step 2</div>
+            <div class="method-label">Count per customer</div>
+            <div class="method-formula">COUNT(tickets) grouped by value</div>
+            <div class="method-note">For each dimension, tickets per customer are counted per unique value. A customer can have tickets across multiple values.</div>
+          </div>
+          <div class="method-arrow">→</div>
+          <div class="method-item">
+            <div class="method-step">Step 3</div>
+            <div class="method-label">QoQ comparison</div>
+            <div class="method-formula">(curr − prev) ÷ prev × 100</div>
+            <div class="method-note">Each value is compared quarter-over-quarter. NEW = appeared this quarter. EXITED = was present last quarter but not this one.</div>
+          </div>
+        </div>
+      </details>
+
+      <div class="kpi-bar" id="causes-kpi" style="grid-template-columns:repeat(4,minmax(0,1fr))"></div>
+
+      <!-- Cause of issue -->
+      <div class="card">
+        <div class="card-title">Cause of issue</div>
+        <div id="dim-cause-warn" class="warn-box" style="display:none">⚠ No cause_of_issue data found in CSVs.</div>
+        <div class="table-wrap"><table>
+          <thead><tr id="dim-cause-summary-thead"></tr></thead>
+          <tbody id="dim-cause-summary-tbody"></tbody>
+          <tfoot><tr id="dim-cause-summary-tfoot"></tr></tfoot>
+        </table></div>
+        <div class="section-header" style="margin-top:18px"><h2>Per customer</h2></div>
+        <div class="table-wrap"><table>
+          <thead><tr id="dim-cause-detail-thead"></tr></thead>
+          <tbody id="dim-cause-detail-tbody"></tbody>
+          <tfoot><tr id="dim-cause-detail-tfoot"></tr></tfoot>
+        </table></div>
+      </div>
+
+      <!-- Product -->
+      <div class="card">
+        <div class="card-title">Product</div>
+        <div id="dim-product-warn" class="warn-box" style="display:none">⚠ No product data found in CSVs.</div>
+        <div class="table-wrap"><table>
+          <thead><tr id="dim-product-summary-thead"></tr></thead>
+          <tbody id="dim-product-summary-tbody"></tbody>
+          <tfoot><tr id="dim-product-summary-tfoot"></tr></tfoot>
+        </table></div>
+        <div class="section-header" style="margin-top:18px"><h2>Per customer</h2></div>
+        <div class="table-wrap"><table>
+          <thead><tr id="dim-product-detail-thead"></tr></thead>
+          <tbody id="dim-product-detail-tbody"></tbody>
+          <tfoot><tr id="dim-product-detail-tfoot"></tr></tfoot>
+        </table></div>
+      </div>
+
+      <!-- Version -->
+      <div class="card">
+        <div class="card-title">Version</div>
+        <div id="dim-version-warn" class="warn-box" style="display:none">⚠ No version data found in CSVs.</div>
+        <div class="table-wrap"><table>
+          <thead><tr id="dim-version-summary-thead"></tr></thead>
+          <tbody id="dim-version-summary-tbody"></tbody>
+          <tfoot><tr id="dim-version-summary-tfoot"></tr></tfoot>
+        </table></div>
+        <div class="section-header" style="margin-top:18px"><h2>Per customer</h2></div>
+        <div class="table-wrap"><table>
+          <thead><tr id="dim-version-detail-thead"></tr></thead>
+          <tbody id="dim-version-detail-tbody"></tbody>
+          <tfoot><tr id="dim-version-detail-tfoot"></tr></tfoot>
+        </table></div>
+      </div>
+
+      <!-- Region -->
+      <div class="card">
+        <div class="card-title">Region</div>
+        <div id="dim-region-warn" class="warn-box" style="display:none">⚠ No region data found in CSVs.</div>
+        <div class="table-wrap"><table>
+          <thead><tr id="dim-region-summary-thead"></tr></thead>
+          <tbody id="dim-region-summary-tbody"></tbody>
+          <tfoot><tr id="dim-region-summary-tfoot"></tr></tfoot>
+        </table></div>
+        <div class="section-header" style="margin-top:18px"><h2>Per customer</h2></div>
+        <div class="table-wrap"><table>
+          <thead><tr id="dim-region-detail-thead"></tr></thead>
+          <tbody id="dim-region-detail-tbody"></tbody>
+          <tfoot><tr id="dim-region-detail-tfoot"></tr></tfoot>
+        </table></div>
+      </div>
+
+      <div class="dl-section">
+        <button class="primary" onclick="downloadCausesExcel()">&#8659; Download Excel</button>
+        <span class="dl-note" id="causes-dl-note"></span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ── STATE ──────────────────────────────────────────────────────
+let state = { prevQ:'Q4 2025', currQ:'Q1 2026', lanes:200, customers:[] };
+// customer shape: { name, prevTickets, currTickets, prevMTTR, currMTTR, prevMTBF, currMTBF, prevCauses, currCauses }
+// MTTR/MTBF: null = no data. Causes: { bug: N, hardware: N, ... }
+
+let prevRaw = null, currRaw = null;
+
+// ── CUSTOMER MAPPING ───────────────────────────────────────────
+const MAP = {
+  'rail_il':'Rail IL','rail-hashalom':'Rail IL','rail-jerusalem':'Rail IL',
+  'camry':'Camry','camry__dla':'Camry',
+  'hermes':'Hermes','pfo':'Hermes','lca':'Hermes','nsi':'Hermes',
+  'charleroi':'Charleroi','dfw':'DFW',
+  'gt':'GT','gt__new_york':'GT','gt__new_york_newark':'GT','gt__madrid':'GT',
+  'gt__paris':'GT','gt__london-luton':'GT','gt__barcelona':'GT','gt__prague':'GT',
+  'delta':'Delta','delta_airlines':'Delta','dla':'Delta',
+  'sin':'Changi','changi':'Changi',
+  'barclays':'Barclays','jfk':'JFK','pmo':'PMO','genoa':'Genoa',
+  'guatemala':'Guatemala','punta_cana':'Punta Cana','maale_adumim':'Maale Adumim',
+  'shikun-binui':'Shikun Binui','maman':'Maman','mivdaka_':'Mivdaka',
+};
+function norm(raw) {
+  if (!raw) return null;
+  const c = String(raw).toLowerCase().trim();
+  if (MAP[c]) return MAP[c];
+  if (c.startsWith('rail')) return 'Rail IL';
+  if (c.startsWith('gt__')) return 'GT';
+  if (c.startsWith('camry__')) return 'Camry';
+  return null;
+}
+
+// ── TABS ───────────────────────────────────────────────────────
+const TAB_ORDER = ['data','tickets','mttr','mtbf','causes'];
+function showTab(id) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-nav button').forEach((b,i) => b.classList.toggle('active', TAB_ORDER[i] === id));
+  document.getElementById('tab-' + id).classList.add('active');
+  if (id === 'tickets') renderTickets();
+  if (id === 'mttr')    renderMTTR();
+  if (id === 'mtbf')    renderMTBF();
+  if (id === 'causes')  renderCauses();
+}
+function enableTabs() {
+  ['tickets','mttr','mtbf','causes'].forEach(id => { document.getElementById('btn-' + id).disabled = false; });
+  const dlAll = document.getElementById('btn-dl-all');
+  dlAll.disabled = false; dlAll.style.opacity = '1'; dlAll.style.cursor = 'pointer';
+}
+
+// ── LOCALSTORAGE ───────────────────────────────────────────────
+function saveToStorage() {
+  state.prevQ = document.getElementById('prev-q').value;
+  state.currQ = document.getElementById('curr-q').value;
+  state.lanes = parseInt(document.getElementById('lanes').value) || 200;
+  localStorage.setItem('qbr_state', JSON.stringify(state));
+  document.getElementById('save-status').textContent = 'Saved ' + new Date().toLocaleTimeString();
+}
+function loadFromStorage() {
+  const raw = localStorage.getItem('qbr_state');
+  if (!raw) return;
+  try {
+    state = JSON.parse(raw);
+    document.getElementById('prev-q').value = state.prevQ || 'Q4 2025';
+    document.getElementById('curr-q').value = state.currQ || 'Q1 2026';
+    document.getElementById('lanes').value  = state.lanes || 200;
+    if (state.customers && state.customers.length) { renderDataTable(); enableTabs(); }
+    document.getElementById('save-status').textContent = 'Loaded from storage';
+  } catch(e) {}
+}
+function clearData() {
+  if (!confirm('Clear all customer data?')) return;
+  state.customers = [];
+  localStorage.removeItem('qbr_state');
+  document.getElementById('data-table-card').style.display = 'none';
+  ['tickets','mttr','mtbf','causes'].forEach(id => { document.getElementById('btn-' + id).disabled = true; });
+  const dlAll = document.getElementById('btn-dl-all');
+  dlAll.disabled = true; dlAll.style.opacity = '0.5'; dlAll.style.cursor = 'not-allowed';
+  document.getElementById('save-status').textContent = '';
+}
+
+// ── FILE DROP ZONES ────────────────────────────────────────────
+function setupDrop(zoneId, inputId, nameId, key) {
+  const zone = document.getElementById(zoneId), input = document.getElementById(inputId);
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('over'));
+  zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('over'); loadFile(e.dataTransfer.files[0], zoneId, nameId, key); });
+  input.addEventListener('change', e => loadFile(e.target.files[0], zoneId, nameId, key));
+}
+function loadFile(file, zoneId, nameId, key) {
+  if (!file) return;
+  Papa.parse(file, { header:true, skipEmptyLines:true, complete: res => {
+    if (key === 'prev') prevRaw = res.data; else currRaw = res.data;
+    document.getElementById(nameId).textContent = '✓ ' + file.name;
+    const z = document.getElementById(zoneId);
+    z.classList.add('done');
+    z.querySelector('.drop-icon').textContent = '✓';
+  }});
+}
+setupDrop('drop-prev','fp','prev-fname','prev');
+setupDrop('drop-curr','fc','curr-fname','curr');
+
+// ── CSV PARSING ────────────────────────────────────────────────
+function processQuarter(data) {
+  const tickets={}, mttrA={}, mttrN={}, ticketDates={}, causes={}, products={}, versions={}, regions={};
+  (data||[]).forEach(r => {
+    const name = norm(r.airport_code || r.organization);
+    if (!name) return;
+    tickets[name] = (tickets[name]||0) + 1;
+
+    // Calculate MTTR from timestamps (handles both CSV column naming conventions)
+    const created = r.created_at_dt || r.created_timedate || r.created_at;
+    const solved  = r.solved_at_dt  || r.solved_timestamp || r.solved_at;
+    let mt = NaN;
+    if (created && solved) {
+      const ms = new Date(solved) - new Date(created);
+      if (ms > 0) mt = ms / 3600000; // convert ms → hours
+    }
+    if (isNaN(mt)) mt = parseFloat(r.MTTR || r.mttr); // fallback to pre-calculated column
+    if (!isNaN(mt) && mt > 0) { mttrA[name]=(mttrA[name]||0)+mt; mttrN[name]=(mttrN[name]||0)+1; }
+
+    // Collect creation timestamps for MTBF calculation
+    const createdTs = r.created_at_dt || r.created_timedate || r.created_at;
+    if (createdTs) {
+      const d = new Date(createdTs);
+      if (!isNaN(d)) {
+        if (!ticketDates[name]) ticketDates[name] = [];
+        ticketDates[name].push(d.getTime());
+      }
+    }
+
+    // Cause of issue, product, version, region breakdowns
+    const cause   = String(r.cause_of_issue || r.cause    || '').toLowerCase().trim();
+    const product = String(r.product                       || '').toLowerCase().trim();
+    const version = String(r.software_version || r.version  || '').toLowerCase().trim();
+    const region  = String(r.region                        || '').toLowerCase().trim();
+    function addDim(map, key) { if (!key) return; if (!map[name]) map[name]={}; map[name][key]=(map[name][key]||0)+1; }
+    addDim(causes,   cause);
+    addDim(products, product);
+    addDim(versions, version);
+    addDim(regions,  region);
+  });
+
+  const mttr={}, mtbf={};
+  Object.keys(mttrA).forEach(n => mttr[n] = +(mttrA[n]/mttrN[n]).toFixed(2));
+
+  // Calculate MTBF: sort tickets by date, average the gaps between consecutive tickets
+  Object.keys(ticketDates).forEach(n => {
+    const dates = ticketDates[n].sort((a,b) => a - b);
+    if (dates.length < 2) return; // need at least 2 tickets to have a gap
+    let totalGap = 0;
+    for (let i = 1; i < dates.length; i++) totalGap += (dates[i] - dates[i-1]);
+    mtbf[n] = +((totalGap / (dates.length - 1)) / 3600000).toFixed(2); // ms → hours
+  });
+
+  return { tickets, mttr, mtbf, causes, products, versions, regions };
+}
+
+function parseCSVs() {
+  if (!prevRaw && !currRaw) { showErr('Upload at least one CSV first.'); return; }
+  document.getElementById('upload-err').innerHTML = '';
+  const unknown = new Set();
+  // collect unknowns
+  [...(prevRaw||[]), ...(currRaw||[])].forEach(r => {
+    const raw = r.airport_code || r.organization;
+    if (raw && String(raw).trim() && !norm(raw)) unknown.add(String(raw).trim());
+  });
+  const prev = processQuarter(prevRaw), curr = processQuarter(currRaw);
+  const names = [...new Set([...Object.keys(prev.tickets), ...Object.keys(curr.tickets)])];
+  state.customers = names.map(n => ({
+    name: n,
+    prevTickets: prev.tickets[n]||0, currTickets: curr.tickets[n]||0,
+    prevMTTR: prev.mttr[n]??null,   currMTTR: curr.mttr[n]??null,
+    prevMTBF: prev.mtbf[n]??null,   currMTBF: curr.mtbf[n]??null,
+    prevCauses: prev.causes[n]||{},   currCauses: curr.causes[n]||{},
+    prevProduct: prev.products[n]||{}, currProduct: curr.products[n]||{},
+    prevVersion: prev.versions[n]||{}, currVersion: curr.versions[n]||{},
+    prevRegion:  prev.regions[n]||{},  currRegion:  curr.regions[n]||{},
+  })).sort((a,b) => b.currTickets - a.currTickets);
+
+  document.getElementById('warn-box').innerHTML = unknown.size
+    ? `<div class="warn-box">⚠ Unknown codes not grouped: <strong>${[...unknown].join(', ')}</strong>. Add to mapping or rename in the table.</div>` : '';
+  renderDataTable(); enableTabs(); saveToStorage();
+}
+
+function buildBlank() {
+  state.customers = [{ name:'Customer 1', prevTickets:0, currTickets:0, prevMTTR:null, currMTTR:null, prevMTBF:null, currMTBF:null, prevCauses:{}, currCauses:{}, prevProduct:{}, currProduct:{}, prevVersion:{}, currVersion:{}, prevRegion:{}, currRegion:{} }];
+  document.getElementById('warn-box').innerHTML = '';
+  renderDataTable(); enableTabs();
+}
+
+// ── DATA TABLE ─────────────────────────────────────────────────
+function renderDataTable() {
+  document.getElementById('dh-pt').textContent = state.prevQ + ' Tickets';
+  document.getElementById('dh-ct').textContent = state.currQ + ' Tickets';
+  const tbody = document.getElementById('data-tbody');
+  tbody.innerHTML = '';
+  state.customers.forEach((c, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input class="name-input" type="text" value="${esc(c.name)}" oninput="state.customers[${i}].name=this.value"></td>
+      <td><input type="number" value="${c.prevTickets}" min="0" oninput="state.customers[${i}].prevTickets=+this.value||0;updateDataRow(${i})"></td>
+      <td><input type="number" value="${c.currTickets}" min="0" oninput="state.customers[${i}].currTickets=+this.value||0;updateDataRow(${i})"></td>
+      <td id="dr-pct-${i}">${pctBadge(c.prevTickets, c.currTickets)}</td>
+      <td><button class="sm danger" onclick="removeRow(${i})">✕</button></td>`;
+    tbody.appendChild(tr);
+  });
+  updateDataTotals();
+  document.getElementById('data-table-card').style.display = 'block';
+}
+function updateDataRow(i) {
+  const c = state.customers[i];
+  const cell = document.getElementById('dr-pct-' + i);
+  if (cell) cell.innerHTML = pctBadge(c.prevTickets, c.currTickets);
+  updateDataTotals();
+}
+function updateDataTotals() {
+  const tP = state.customers.reduce((s,c)=>s+c.prevTickets,0);
+  const tC = state.customers.reduce((s,c)=>s+c.currTickets,0);
+  const pct = tP>0 ? (tC>=tP?'+':'')+Math.round((tC-tP)/tP*100)+'%' : '—';
+  const tfoot = document.getElementById('data-tfoot');
+  if (tfoot) tfoot.innerHTML = `<td>Total</td><td class="mono">${tP}</td><td class="mono">${tC}</td><td>${pct}</td><td></td>`;
+}
+function addRow() {
+  state.customers.push({ name:'New customer', prevTickets:0, currTickets:0, prevMTTR:null, currMTTR:null, prevMTBF:null, currMTBF:null });
+  renderDataTable();
+}
+function removeRow(i) { state.customers.splice(i,1); renderDataTable(); }
+
+// ── HELPERS ────────────────────────────────────────────────────
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function showErr(msg) { document.getElementById('upload-err').innerHTML = `<div class="error">${msg}</div>`; }
+function fmt(v, d=2) { return v == null ? '—' : Number(v).toFixed(d); }
+function avg(arr) { return arr.length ? arr.reduce((s,v)=>s+v,0)/arr.length : null; }
+// Weighted average of metricField, weighted by ticketField — excludes customers where metric is null
+function weightedAvg(customers, metricField, ticketField) {
+  let sumWT = 0, sumW = 0;
+  customers.forEach(c => {
+    if (c[metricField] != null && c[ticketField] > 0) {
+      sumWT += c[metricField] * c[ticketField];
+      sumW  += c[ticketField];
+    }
+  });
+  return sumW > 0 ? sumWT / sumW : null;
+}
+
+function pctBadge(prev, curr) {
+  if (prev === 0 && curr > 0) return '<span class="badge new">New</span>';
+  if (curr === 0 && prev > 0) return '<span class="badge exited">Exited</span>';
+  if (prev > 0) {
+    const p = Math.round((curr - prev) / prev * 100);
+    const col = p > 0 ? '#991B1B' : p < 0 ? '#1D9E75' : 'var(--text2)';
+    return `<span class="mono" style="font-weight:500;color:${col}">${p>0?'+':''}${p}%</span>`;
+  }
+  return '—';
+}
+// lowerBetter=true → positive change is red (MTTR). lowerBetter=false → positive is green (MTBF).
+function pctChange(prev, curr, lowerBetter=true) {
+  if (prev == null || curr == null || prev === 0) return '—';
+  const p = Math.round((curr - prev) / prev * 100);
+  const good = lowerBetter ? p < 0 : p > 0;
+  const bad  = lowerBetter ? p > 0 : p < 0;
+  const col = bad ? '#991B1B' : good ? '#1D9E75' : 'var(--text2)';
+  return `<span class="mono" style="font-weight:500;color:${col}">${p>0?'+':''}${p}%</span>`;
+}
+
+// ── TICKET VOLUME ──────────────────────────────────────────────
+function renderTickets() {
+  const has = state.customers.length > 0;
+  document.getElementById('tickets-empty').style.display   = has ? 'none'  : 'block';
+  document.getElementById('tickets-content').style.display = has ? 'block' : 'none';
+  if (!has) return;
+  const pq = state.prevQ, cq = state.currQ, lanes = state.lanes;
+  const tP = state.customers.reduce((s,c)=>s+c.prevTickets,0);
+  const tC = state.customers.reduce((s,c)=>s+c.currTickets,0);
+  const tplP = lanes>0?(tP/lanes).toFixed(2):'—';
+  const tplC = lanes>0?(tC/lanes).toFixed(2):'—';
+  const pctNum = tP>0 ? Math.round((tC-tP)/tP*100) : null;
+  const pctStr = pctNum!=null ? (pctNum>0?'+':'')+pctNum+'%' : '—';
+  const pctCol = pctNum!=null ? (pctNum>0?'#991B1B':'#1D9E75') : 'var(--text2)';
+
+  document.getElementById('tickets-kpi').innerHTML = `
+    <div class="kpi"><div class="kpi-label">${pq} total</div><div class="kpi-val">${tP}</div></div>
+    <div class="kpi"><div class="kpi-label">${cq} total</div><div class="kpi-val">${tC}</div></div>
+    <div class="kpi"><div class="kpi-label">QoQ change</div><div class="kpi-val" style="color:${pctCol}">${pctStr}</div></div>
+    <div class="kpi"><div class="kpi-label">TPL (${cq})</div><div class="kpi-val tpl">${tplC}</div></div>`;
+
+  ['tsh-p','tsh-c','tsh-tp','tsh-tc'].forEach((id,i)=>{
+    document.getElementById(id).textContent = [pq+' Tickets', cq+' Tickets', 'TPL '+pq, 'TPL '+cq][i];
+  });
+  document.getElementById('ts-p').textContent   = tP;
+  document.getElementById('ts-c').textContent   = tC;
+  document.getElementById('ts-l').textContent   = lanes;
+  document.getElementById('ts-tp').textContent  = tplP;
+  document.getElementById('ts-tc').textContent  = tplC;
+  document.getElementById('ts-pct').textContent = pctStr;
+
+  document.getElementById('tickets-thead').innerHTML = `
+    <th style="text-align:left;min-width:140px">Customer</th>
+    <th>${pq} Tickets</th><th>${cq} Tickets</th>
+    <th>Total Lanes</th><th>TPL ${pq}</th><th>TPL ${cq}</th><th>% Change</th>`;
+
+  const sorted = [...state.customers].sort((a,b)=>b.currTickets-a.currTickets);
+  document.getElementById('tickets-tbody').innerHTML = sorted.map(c => {
+    const tp = lanes>0?(c.prevTickets/lanes).toFixed(2):'—';
+    const tc = lanes>0?(c.currTickets/lanes).toFixed(2):'—';
+    return `<tr>
+      <td style="font-weight:500">${esc(c.name)}</td>
+      <td class="mono">${c.prevTickets}</td><td class="mono">${c.currTickets}</td>
+      <td class="mono" style="color:var(--text3)">${lanes}</td>
+      <td class="tpl-val${c.prevTickets===0?' dim':''}">${tp}</td>
+      <td class="tpl-val${c.currTickets===0?' dim':''}">${tc}</td>
+      <td>${pctBadge(c.prevTickets,c.currTickets)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tickets-tfoot').innerHTML =
+    `<td>Total</td><td>${tP}</td><td>${tC}</td><td>${lanes}</td><td>${tplP}</td><td>${tplC}</td><td>${pctStr}</td>`;
+}
+
+// ── MTTR ───────────────────────────────────────────────────────
+function renderMTTR() {
+  const has = state.customers.length > 0;
+  document.getElementById('mttr-empty').style.display   = has ? 'none'  : 'block';
+  document.getElementById('mttr-content').style.display = has ? 'block' : 'none';
+  if (!has) return;
+  const pq = state.prevQ, cq = state.currQ;
+  const withData = state.customers.filter(c=>c.prevMTTR!=null||c.currMTTR!=null);
+  document.getElementById('mttr-warn').style.display = withData.length===0 ? 'block' : 'none';
+
+  // Weighted by ticket count so high-volume customers carry more weight
+  const avgP = weightedAvg(state.customers, 'prevMTTR', 'prevTickets');
+  const avgC = weightedAvg(state.customers, 'currMTTR', 'currTickets');
+  const pctNum = avgP&&avgC ? Math.round((avgC-avgP)/avgP*100) : null;
+  const pctStr = pctNum!=null?(pctNum>0?'+':'')+pctNum+'%':'—';
+  const pctCol = pctNum!=null?(pctNum>0?'#991B1B':'#1D9E75'):'var(--text2)';
+
+  document.getElementById('mttr-kpi').innerHTML = `
+    <div class="kpi"><div class="kpi-label">Avg MTTR ${pq}</div><div class="kpi-val">${avgP!=null?avgP.toFixed(1)+'h':'—'}</div></div>
+    <div class="kpi"><div class="kpi-label">Avg MTTR ${cq}</div><div class="kpi-val">${avgC!=null?avgC.toFixed(1)+'h':'—'}</div></div>
+    <div class="kpi"><div class="kpi-label">QoQ change</div><div class="kpi-val" style="color:${pctCol}">${pctStr}</div></div>
+    <div class="kpi"><div class="kpi-label">Customers w/ data</div><div class="kpi-val" style="font-size:20px">${withData.length}/${state.customers.length}</div></div>`;
+
+  document.getElementById('mttr-thead').innerHTML =
+    `<th style="text-align:left;min-width:140px">Customer</th>
+     <th>${pq} Tickets</th><th>${pq} MTTR (h)</th>
+     <th>${cq} Tickets</th><th>${cq} MTTR (h)</th>
+     <th>% Change</th>`;
+
+  const sorted = [...state.customers].sort((a,b)=>(b.currMTTR??-1)-(a.currMTTR??-1));
+  document.getElementById('mttr-tbody').innerHTML = sorted.map(c=>`<tr>
+    <td style="font-weight:500">${esc(c.name)}</td>
+    <td class="mono" style="color:var(--text2)">${c.prevTickets}</td>
+    <td class="mono">${fmt(c.prevMTTR)}</td>
+    <td class="mono" style="color:var(--text2)">${c.currTickets}</td>
+    <td class="mono">${fmt(c.currMTTR)}</td>
+    <td>${pctChange(c.prevMTTR,c.currMTTR,true)}</td>
+  </tr>`).join('');
+  const tP = state.customers.reduce((s,c)=>s+c.prevTickets,0);
+  const tC = state.customers.reduce((s,c)=>s+c.currTickets,0);
+  document.getElementById('mttr-tfoot').innerHTML =
+    `<td>Weighted avg</td><td>${tP}</td><td>${fmt(avgP)}</td><td>${tC}</td><td>${fmt(avgC)}</td><td>${pctStr}</td>`;
+}
+
+// ── MTBF ───────────────────────────────────────────────────────
+function renderMTBF() {
+  const has = state.customers.length > 0;
+  document.getElementById('mtbf-empty').style.display   = has ? 'none'  : 'block';
+  document.getElementById('mtbf-content').style.display = has ? 'block' : 'none';
+  if (!has) return;
+  const pq = state.prevQ, cq = state.currQ;
+  const withData = state.customers.filter(c=>c.prevMTBF!=null||c.currMTBF!=null);
+  document.getElementById('mtbf-warn').style.display = withData.length===0 ? 'block' : 'none';
+
+  // Weighted by ticket count so high-volume customers carry more weight
+  const avgP = weightedAvg(state.customers, 'prevMTBF', 'prevTickets');
+  const avgC = weightedAvg(state.customers, 'currMTBF', 'currTickets');
+  const pctNum = avgP&&avgC ? Math.round((avgC-avgP)/avgP*100) : null;
+  const pctStr = pctNum!=null?(pctNum>0?'+':'')+pctNum+'%':'—';
+  const pctCol = pctNum!=null?(pctNum>0?'#1D9E75':'#991B1B'):'var(--text2)'; // higher MTBF = green
+
+  document.getElementById('mtbf-kpi').innerHTML = `
+    <div class="kpi"><div class="kpi-label">Avg MTBF ${pq}</div><div class="kpi-val">${avgP!=null?avgP.toFixed(1)+'h':'—'}</div></div>
+    <div class="kpi"><div class="kpi-label">Avg MTBF ${cq}</div><div class="kpi-val">${avgC!=null?avgC.toFixed(1)+'h':'—'}</div></div>
+    <div class="kpi"><div class="kpi-label">QoQ change</div><div class="kpi-val" style="color:${pctCol}">${pctStr}</div></div>
+    <div class="kpi"><div class="kpi-label">Customers w/ data</div><div class="kpi-val" style="font-size:20px">${withData.length}/${state.customers.length}</div></div>`;
+
+  document.getElementById('mtbf-thead').innerHTML =
+    `<th style="text-align:left;min-width:140px">Customer</th>
+     <th>${pq} Tickets</th><th>${pq} MTBF (h)</th>
+     <th>${cq} Tickets</th><th>${cq} MTBF (h)</th>
+     <th>% Change</th>`;
+
+  const sorted = [...state.customers].sort((a,b)=>(b.currMTBF??-1)-(a.currMTBF??-1));
+  document.getElementById('mtbf-tbody').innerHTML = sorted.map(c=>`<tr>
+    <td style="font-weight:500">${esc(c.name)}</td>
+    <td class="mono" style="color:var(--text2)">${c.prevTickets}</td>
+    <td class="mono">${fmt(c.prevMTBF)}</td>
+    <td class="mono" style="color:var(--text2)">${c.currTickets}</td>
+    <td class="mono">${fmt(c.currMTBF)}</td>
+    <td>${pctChange(c.prevMTBF,c.currMTBF,false)}</td>
+  </tr>`).join('');
+  const tP = state.customers.reduce((s,c)=>s+c.prevTickets,0);
+  const tC = state.customers.reduce((s,c)=>s+c.currTickets,0);
+  document.getElementById('mtbf-tfoot').innerHTML =
+    `<td>Weighted avg</td><td>${tP}</td><td>${fmt(avgP)}</td><td>${tC}</td><td>${fmt(avgC)}</td><td>${pctStr}</td>`;
+}
+
+// ── EXCEL DOWNLOADS ────────────────────────────────────────────
+function downloadTicketsExcel() {
+  const pq=state.prevQ, cq=state.currQ, lanes=state.lanes;
+  const wb=XLSX.utils.book_new();
+  const tP=state.customers.reduce((s,c)=>s+c.prevTickets,0);
+  const tC=state.customers.reduce((s,c)=>s+c.currTickets,0);
+  const pctS=tP>0?(tC>=tP?'+':'')+Math.round((tC-tP)/tP*100)+'%':'—';
+
+  const sumWs=XLSX.utils.aoa_to_sheet([
+    ['Customer',`${pq} Tickets`,`${cq} Tickets`,'Total Lanes',`TPL ${pq}`,`TPL ${cq}`,'% Change'],
+    ['Total',tP,tC,lanes,lanes>0?+(tP/lanes).toFixed(2):'',lanes>0?+(tC/lanes).toFixed(2):'',pctS],
+    [],['TPL = Tickets per Lane ('+lanes+' total lanes)'],
+  ]);
+  sumWs['!cols']=[20,15,15,13,11,11,11].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,sumWs,'TPL Summary');
+
+  const hdr=['Customer',`${pq} Tickets`,`${cq} Tickets`,'Total Lanes',`TPL ${pq}`,`TPL ${cq}`,'% Change'];
+  const rows=[...state.customers].sort((a,b)=>b.currTickets-a.currTickets).map(c=>{
+    let pct='';
+    if(c.prevTickets===0&&c.currTickets>0) pct='NEW';
+    else if(c.currTickets===0&&c.prevTickets>0) pct='EXITED';
+    else if(c.prevTickets>0) pct=(c.currTickets>c.prevTickets?'+':'')+Math.round((c.currTickets-c.prevTickets)/c.prevTickets*100)+'%';
+    return [c.name,c.prevTickets,c.currTickets,lanes,lanes>0?+(c.prevTickets/lanes).toFixed(2):'',lanes>0?+(c.currTickets/lanes).toFixed(2):'',pct];
+  });
+  rows.push(['Total',tP,tC,lanes,lanes>0?+(tP/lanes).toFixed(2):'',lanes>0?+(tC/lanes).toFixed(2):'',pctS]);
+  const ws=XLSX.utils.aoa_to_sheet([hdr,...rows]);
+  ws['!cols']=[22,15,15,13,11,11,11].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws,'TPL Per Customer');
+
+  const fname=`Ticket_Volume_${pq.replace(/\s/g,'_')}_vs_${cq.replace(/\s/g,'_')}.xlsx`;
+  XLSX.writeFile(wb,fname);
+  document.getElementById('tickets-dl-note').textContent=fname+' downloaded.';
+}
+
+function downloadMTTRExcel() {
+  const pq=state.prevQ, cq=state.currQ;
+  const wb=XLSX.utils.book_new();
+  const hdr=['Customer',`${pq} Tickets`,`${pq} MTTR (h)`,`${cq} Tickets`,`${cq} MTTR (h)`,'% Change'];
+  const sorted=[...state.customers].sort((a,b)=>(b.currMTTR??-1)-(a.currMTTR??-1));
+  const rows=sorted.map(c=>{
+    const pct=(c.prevMTTR&&c.currMTTR)?(c.currMTTR>c.prevMTTR?'+':'')+Math.round((c.currMTTR-c.prevMTTR)/c.prevMTTR*100)+'%':'';
+    return [c.name,c.prevTickets,c.prevMTTR??'',c.currTickets,c.currMTTR??'',pct];
+  });
+  const aP=weightedAvg(state.customers,'prevMTTR','prevTickets');
+  const aC=weightedAvg(state.customers,'currMTTR','currTickets');
+  const tP=state.customers.reduce((s,c)=>s+c.prevTickets,0);
+  const tC=state.customers.reduce((s,c)=>s+c.currTickets,0);
+  rows.push(['Weighted avg',tP,aP!=null?+aP.toFixed(2):'',tC,aC!=null?+aC.toFixed(2):'',
+    aP&&aC?(aC>aP?'+':'')+Math.round((aC-aP)/aP*100)+'%':'']);
+  const ws=XLSX.utils.aoa_to_sheet([hdr,...rows]);
+  ws['!cols']=[22,13,16,13,16,14].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws,'MTTR Per Customer');
+  const fname=`MTTR_${pq.replace(/\s/g,'_')}_vs_${cq.replace(/\s/g,'_')}.xlsx`;
+  XLSX.writeFile(wb,fname);
+  document.getElementById('mttr-dl-note').textContent=fname+' downloaded.';
+}
+
+function downloadMTBFExcel() {
+  const pq=state.prevQ, cq=state.currQ;
+  const wb=XLSX.utils.book_new();
+  const hdr=['Customer',`${pq} Tickets`,`${pq} MTBF (h)`,`${cq} Tickets`,`${cq} MTBF (h)`,'% Change'];
+  const sorted=[...state.customers].sort((a,b)=>(b.currMTBF??-1)-(a.currMTBF??-1));
+  const rows=sorted.map(c=>{
+    const pct=(c.prevMTBF&&c.currMTBF)?(c.currMTBF>c.prevMTBF?'+':'')+Math.round((c.currMTBF-c.prevMTBF)/c.prevMTBF*100)+'%':'';
+    return [c.name,c.prevTickets,c.prevMTBF??'',c.currTickets,c.currMTBF??'',pct];
+  });
+  const aP=weightedAvg(state.customers,'prevMTBF','prevTickets');
+  const aC=weightedAvg(state.customers,'currMTBF','currTickets');
+  const tP=state.customers.reduce((s,c)=>s+c.prevTickets,0);
+  const tC=state.customers.reduce((s,c)=>s+c.currTickets,0);
+  rows.push(['Weighted avg',tP,aP!=null?+aP.toFixed(2):'',tC,aC!=null?+aC.toFixed(2):'',
+    aP&&aC?(aC>aP?'+':'')+Math.round((aC-aP)/aP*100)+'%':'']);
+  const ws=XLSX.utils.aoa_to_sheet([hdr,...rows]);
+  ws['!cols']=[22,13,16,13,16,14].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws,'MTBF Per Customer');
+  const fname=`MTBF_${pq.replace(/\s/g,'_')}_vs_${cq.replace(/\s/g,'_')}.xlsx`;
+  XLSX.writeFile(wb,fname);
+  document.getElementById('mtbf-dl-note').textContent=fname+' downloaded.';
+}
+
+// ── CAUSE OF ISSUE ─────────────────────────────────────────────
+function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g,' ') : s; }
+
+// Generic helper: renders summary + per-customer tables for one dimension
+function renderDimension(dimKey, prevField, currField, label, pq, cq) {
+  const valSet = new Set();
+  state.customers.forEach(c => {
+    Object.keys(c[prevField]||{}).forEach(k => valSet.add(k));
+    Object.keys(c[currField]||{}).forEach(k => valSet.add(k));
+  });
+  const allVals = [...valSet].sort();
+  const warnEl = document.getElementById('dim-'+dimKey+'-warn');
+  if (allVals.length === 0) { warnEl.style.display='block'; return null; }
+  warnEl.style.display = 'none';
+
+  const totP = {}, totC = {};
+  allVals.forEach(v => {
+    totP[v] = state.customers.reduce((s,c) => s+(c[prevField]?.[v]||0), 0);
+    totC[v] = state.customers.reduce((s,c) => s+(c[currField]?.[v]||0), 0);
+  });
+  const sorted = [...allVals].sort((a,b) => (totC[b]||0)-(totC[a]||0));
+  const tP = state.customers.reduce((s,c)=>s+c.prevTickets,0);
+  const tC = state.customers.reduce((s,c)=>s+c.currTickets,0);
+
+  // Summary table
+  document.getElementById('dim-'+dimKey+'-summary-thead').innerHTML =
+    `<th style="text-align:left">${label}</th><th>${pq} Count</th><th>${cq} Count</th><th>% Change</th>`;
+  document.getElementById('dim-'+dimKey+'-summary-tbody').innerHTML = sorted.map(v => {
+    const p=totP[v]||0, c2=totC[v]||0;
+    return `<tr><td style="font-weight:500">${cap(v)}</td><td class="mono">${p||'—'}</td><td class="mono">${c2||'—'}</td><td>${pctBadge(p,c2)}</td></tr>`;
+  }).join('');
+  document.getElementById('dim-'+dimKey+'-summary-tfoot').innerHTML =
+    `<td>Total</td><td>${tP}</td><td>${tC}</td><td></td>`;
+
+  // Per-customer table
+  document.getElementById('dim-'+dimKey+'-detail-thead').innerHTML =
+    `<th style="text-align:left;min-width:140px">Customer</th>` +
+    sorted.map(v => `<th>${cap(v)} ${pq}</th><th>${cap(v)} ${cq}</th>`).join('') +
+    `<th>Total ${pq}</th><th>Total ${cq}</th>`;
+  const custSorted = [...state.customers].sort((a,b)=>b.currTickets-a.currTickets);
+  document.getElementById('dim-'+dimKey+'-detail-tbody').innerHTML = custSorted.map(c => {
+    const cols = sorted.map(v => {
+      const p=c[prevField]?.[v]||0, c2=c[currField]?.[v]||0;
+      return `<td class="mono">${p||'—'}</td><td class="mono">${c2||'—'}</td>`;
+    }).join('');
+    return `<tr><td style="font-weight:500">${esc(c.name)}</td>${cols}<td class="mono">${c.prevTickets}</td><td class="mono">${c.currTickets}</td></tr>`;
+  }).join('');
+  document.getElementById('dim-'+dimKey+'-detail-tfoot').innerHTML =
+    `<td>Total</td>${sorted.map(v=>`<td>${totP[v]||'—'}</td><td>${totC[v]||'—'}</td>`).join('')}<td>${tP}</td><td>${tC}</td>`;
+
+  return { sorted, totP, totC };
+}
+
+function renderCauses() {
+  const has = state.customers.length > 0;
+  document.getElementById('causes-empty').style.display   = has ? 'none'  : 'block';
+  document.getElementById('causes-content').style.display = has ? 'block' : 'none';
+  if (!has) return;
+  const pq = state.prevQ, cq = state.currQ;
+
+  const dims = [
+    { key:'cause',   prev:'prevCauses',  curr:'currCauses',  label:'Cause of issue' },
+    { key:'product', prev:'prevProduct', curr:'currProduct', label:'Product' },
+    { key:'version', prev:'prevVersion', curr:'currVersion', label:'Version' },
+    { key:'region',  prev:'prevRegion',  curr:'currRegion',  label:'Region' },
+  ];
+
+  // KPI bar — top value from each dimension
+  document.getElementById('causes-kpi').innerHTML = dims.map(d => {
+    const valSet = new Set();
+    state.customers.forEach(c => {
+      Object.keys(c[d.prev]||{}).forEach(k => valSet.add(k));
+      Object.keys(c[d.curr]||{}).forEach(k => valSet.add(k));
+    });
+    const allVals = [...valSet];
+    if (allVals.length === 0) return `<div class="kpi"><div class="kpi-label">Top ${d.label}</div><div class="kpi-val" style="font-size:16px;color:var(--text3)">No data</div></div>`;
+    const totC = {};
+    allVals.forEach(v => { totC[v] = state.customers.reduce((s,c)=>s+(c[d.curr]?.[v]||0),0); });
+    const top = allVals.sort((a,b)=>(totC[b]||0)-(totC[a]||0))[0];
+    const totP = {};
+    allVals.forEach(v => { totP[v] = state.customers.reduce((s,c)=>s+(c[d.prev]?.[v]||0),0); });
+    const p=totP[top]||0, c2=totC[top]||0;
+    const pct = p>0 ? Math.round((c2-p)/p*100) : null;
+    const pctStr = pct!=null?(pct>0?'+':'')+pct+'%':c2>0?'NEW':'—';
+    const col = pct!=null?(pct>0?'#991B1B':'#1D9E75'):'var(--text2)';
+    return `<div class="kpi">
+      <div class="kpi-label">Top ${d.label}</div>
+      <div class="kpi-val" style="font-size:16px">${cap(top)}</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:2px">${c2} tickets <span style="color:${col};font-weight:500">${pctStr}</span></div>
+    </div>`;
+  }).join('');
+
+  dims.forEach(d => renderDimension(d.key, d.prev, d.curr, d.label, pq, cq));
+}
+
+function downloadCausesExcel() {
+  const pq = state.prevQ, cq = state.currQ;
+  const tP = state.customers.reduce((s,c)=>s+c.prevTickets,0);
+  const tC = state.customers.reduce((s,c)=>s+c.currTickets,0);
+  const custSorted = [...state.customers].sort((a,b)=>b.currTickets-a.currTickets);
+  const wb = XLSX.utils.book_new();
+
+  const dims = [
+    { key:'cause',   prev:'prevCauses',  curr:'currCauses',  label:'Cause of issue', sheet:'Cause of Issue' },
+    { key:'product', prev:'prevProduct', curr:'currProduct', label:'Product',         sheet:'Product' },
+    { key:'version', prev:'prevVersion', curr:'currVersion', label:'Version',         sheet:'Version' },
+    { key:'region',  prev:'prevRegion',  curr:'currRegion',  label:'Region',          sheet:'Region' },
+  ];
+
+  dims.forEach(d => {
+    const valSet = new Set();
+    state.customers.forEach(c => {
+      Object.keys(c[d.prev]||{}).forEach(k => valSet.add(k));
+      Object.keys(c[d.curr]||{}).forEach(k => valSet.add(k));
+    });
+    const totP={}, totC={};
+    const allVals = [...valSet].sort();
+    allVals.forEach(v => {
+      totP[v]=state.customers.reduce((s,c)=>s+(c[d.prev]?.[v]||0),0);
+      totC[v]=state.customers.reduce((s,c)=>s+(c[d.curr]?.[v]||0),0);
+    });
+    const sorted = [...allVals].sort((a,b)=>(totC[b]||0)-(totC[a]||0));
+
+    // Summary sheet
+    const hdr = [d.label, `${pq} Count`, `${cq} Count`, '% Change'];
+    const rows = sorted.map(v => {
+      const p=totP[v]||0, c2=totC[v]||0;
+      const pct = p>0?(c2>p?'+':'')+Math.round((c2-p)/p*100)+'%':c2>0?'NEW':'—';
+      return [cap(v), p, c2, pct];
+    });
+    rows.push(['Total', tP, tC, '']);
+    const ws1 = XLSX.utils.aoa_to_sheet([hdr, ...rows]);
+    ws1['!cols'] = [22,14,14,12].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb, ws1, d.sheet+' Summary');
+
+    // Per-customer sheet
+    const hdr2 = ['Customer', ...sorted.flatMap(v=>[`${cap(v)} ${pq}`,`${cap(v)} ${cq}`]), `Total ${pq}`, `Total ${cq}`];
+    const rows2 = custSorted.map(c => [
+      c.name,
+      ...sorted.flatMap(v=>[c[d.prev]?.[v]||0, c[d.curr]?.[v]||0]),
+      c.prevTickets, c.currTickets
+    ]);
+    rows2.push(['Total', ...sorted.flatMap(v=>[totP[v]||0,totC[v]||0]), tP, tC]);
+    const ws2 = XLSX.utils.aoa_to_sheet([hdr2, ...rows2]);
+    ws2['!cols'] = [22, ...sorted.flatMap(()=>[12,12]), 12, 12].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb, ws2, d.sheet+' Per Customer');
+  });
+
+  const fname = `Breakdown_${pq.replace(/\s/g,'_')}_vs_${cq.replace(/\s/g,'_')}.xlsx`;
+  XLSX.writeFile(wb, fname);
+  document.getElementById('causes-dl-note').textContent = fname + ' downloaded.';
+}
+
+// ── DOWNLOAD ALL ───────────────────────────────────────────────
+function downloadAllExcel() {
+  const pq=state.prevQ, cq=state.currQ, lanes=state.lanes;
+  const wb=XLSX.utils.book_new();
+  const tP=state.customers.reduce((s,c)=>s+c.prevTickets,0);
+  const tC=state.customers.reduce((s,c)=>s+c.currTickets,0);
+  const custSorted=[...state.customers].sort((a,b)=>b.currTickets-a.currTickets);
+  const pctS=tP>0?(tC>=tP?'+':'')+Math.round((tC-tP)/tP*100)+'%':'—';
+
+  // ── Sheet 1: TPL Summary ──
+  const sumWs=XLSX.utils.aoa_to_sheet([
+    ['Customer',`${pq} Tickets`,`${cq} Tickets`,'Total Lanes',`TPL ${pq}`,`TPL ${cq}`,'% Change'],
+    ['Total',tP,tC,lanes,lanes>0?+(tP/lanes).toFixed(2):'',lanes>0?+(tC/lanes).toFixed(2):'',pctS],
+    [],['TPL = Tickets per Lane ('+lanes+' total lanes)'],
+  ]);
+  sumWs['!cols']=[20,15,15,13,11,11,11].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,sumWs,'TPL Summary');
+
+  // ── Sheet 2: TPL Per Customer ──
+  const tplHdr=['Customer',`${pq} Tickets`,`${cq} Tickets`,'Total Lanes',`TPL ${pq}`,`TPL ${cq}`,'% Change'];
+  const tplRows=custSorted.map(c=>{
+    let pct='';
+    if(c.prevTickets===0&&c.currTickets>0) pct='NEW';
+    else if(c.currTickets===0&&c.prevTickets>0) pct='EXITED';
+    else if(c.prevTickets>0) pct=(c.currTickets>c.prevTickets?'+':'')+Math.round((c.currTickets-c.prevTickets)/c.prevTickets*100)+'%';
+    return [c.name,c.prevTickets,c.currTickets,lanes,lanes>0?+(c.prevTickets/lanes).toFixed(2):'',lanes>0?+(c.currTickets/lanes).toFixed(2):'',pct];
+  });
+  tplRows.push(['Total',tP,tC,lanes,lanes>0?+(tP/lanes).toFixed(2):'',lanes>0?+(tC/lanes).toFixed(2):'',pctS]);
+  const tplWs=XLSX.utils.aoa_to_sheet([tplHdr,...tplRows]);
+  tplWs['!cols']=[22,15,15,13,11,11,11].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,tplWs,'TPL Per Customer');
+
+  // ── Sheet 3: MTTR Per Customer ──
+  const mttrHdr=['Customer',`${pq} Tickets`,`${pq} MTTR (h)`,`${cq} Tickets`,`${cq} MTTR (h)`,'% Change'];
+  const mttrRows=[...state.customers].sort((a,b)=>(b.currMTTR??-1)-(a.currMTTR??-1)).map(c=>{
+    const pct=(c.prevMTTR&&c.currMTTR)?(c.currMTTR>c.prevMTTR?'+':'')+Math.round((c.currMTTR-c.prevMTTR)/c.prevMTTR*100)+'%':'';
+    return [c.name,c.prevTickets,c.prevMTTR??'',c.currTickets,c.currMTTR??'',pct];
+  });
+  const maP=weightedAvg(state.customers,'prevMTTR','prevTickets'), maC=weightedAvg(state.customers,'currMTTR','currTickets');
+  mttrRows.push(['Weighted avg',tP,maP!=null?+maP.toFixed(2):'',tC,maC!=null?+maC.toFixed(2):'',
+    maP&&maC?(maC>maP?'+':'')+Math.round((maC-maP)/maP*100)+'%':'']);
+  const mttrWs=XLSX.utils.aoa_to_sheet([mttrHdr,...mttrRows]);
+  mttrWs['!cols']=[22,13,16,13,16,14].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,mttrWs,'MTTR Per Customer');
+
+  // ── Sheet 4: MTBF Per Customer ──
+  const mtbfHdr=['Customer',`${pq} Tickets`,`${pq} MTBF (h)`,`${cq} Tickets`,`${cq} MTBF (h)`,'% Change'];
+  const mtbfRows=[...state.customers].sort((a,b)=>(b.currMTBF??-1)-(a.currMTBF??-1)).map(c=>{
+    const pct=(c.prevMTBF&&c.currMTBF)?(c.currMTBF>c.prevMTBF?'+':'')+Math.round((c.currMTBF-c.prevMTBF)/c.prevMTBF*100)+'%':'';
+    return [c.name,c.prevTickets,c.prevMTBF??'',c.currTickets,c.currMTBF??'',pct];
+  });
+  const mbP=weightedAvg(state.customers,'prevMTBF','prevTickets'), mbC=weightedAvg(state.customers,'currMTBF','currTickets');
+  mtbfRows.push(['Weighted avg',tP,mbP!=null?+mbP.toFixed(2):'',tC,mbC!=null?+mbC.toFixed(2):'',
+    mbP&&mbC?(mbC>mbP?'+':'')+Math.round((mbC-mbP)/mbP*100)+'%':'']);
+  const mtbfWs=XLSX.utils.aoa_to_sheet([mtbfHdr,...mtbfRows]);
+  mtbfWs['!cols']=[22,13,16,13,16,14].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,mtbfWs,'MTBF Per Customer');
+
+  // ── Sheets 5–12: Cause / Product / Version / Region ──
+  const dims=[
+    {prev:'prevCauses',  curr:'currCauses',  sheet:'Cause of Issue'},
+    {prev:'prevProduct', curr:'currProduct', sheet:'Product'},
+    {prev:'prevVersion', curr:'currVersion', sheet:'Version'},
+    {prev:'prevRegion',  curr:'currRegion',  sheet:'Region'},
+  ];
+  dims.forEach(d=>{
+    const valSet=new Set();
+    state.customers.forEach(c=>{
+      Object.keys(c[d.prev]||{}).forEach(k=>valSet.add(k));
+      Object.keys(c[d.curr]||{}).forEach(k=>valSet.add(k));
+    });
+    const totP={}, totC={};
+    const allVals=[...valSet].sort();
+    allVals.forEach(v=>{
+      totP[v]=state.customers.reduce((s,c)=>s+(c[d.prev]?.[v]||0),0);
+      totC[v]=state.customers.reduce((s,c)=>s+(c[d.curr]?.[v]||0),0);
+    });
+    const sorted=[...allVals].sort((a,b)=>(totC[b]||0)-(totC[a]||0));
+
+    // Summary sheet
+    const sh1=[d.sheet, `${pq} Count`,`${cq} Count`,'% Change'];
+    const sr1=sorted.map(v=>{
+      const p=totP[v]||0,c2=totC[v]||0;
+      const pct=p>0?(c2>p?'+':'')+Math.round((c2-p)/p*100)+'%':c2>0?'NEW':'—';
+      return [cap(v),p,c2,pct];
+    });
+    sr1.push(['Total',tP,tC,'']);
+    const ws1=XLSX.utils.aoa_to_sheet([sh1,...sr1]);
+    ws1['!cols']=[22,14,14,12].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb,ws1,d.sheet+' Summary');
+
+    // Per-customer sheet
+    const sh2=['Customer',...sorted.flatMap(v=>[`${cap(v)} ${pq}`,`${cap(v)} ${cq}`]),`Total ${pq}`,`Total ${cq}`];
+    const sr2=custSorted.map(c=>[
+      c.name,
+      ...sorted.flatMap(v=>[c[d.prev]?.[v]||0,c[d.curr]?.[v]||0]),
+      c.prevTickets,c.currTickets
+    ]);
+    sr2.push(['Total',...sorted.flatMap(v=>[totP[v]||0,totC[v]||0]),tP,tC]);
+    const ws2=XLSX.utils.aoa_to_sheet([sh2,...sr2]);
+    ws2['!cols']=[22,...sorted.flatMap(()=>[12,12]),12,12].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb,ws2,d.sheet+' Per Customer');
+  });
+
+  const fname=`SeeTrue_QBR_${pq.replace(/\s/g,'_')}_vs_${cq.replace(/\s/g,'_')}.xlsx`;
+  XLSX.writeFile(wb,fname);
+}
+
+// ── INIT ───────────────────────────────────────────────────────
+loadFromStorage();
+</script>
+</body>
+</html>
