@@ -1626,156 +1626,195 @@ function generateNarrative() {
   const tP = cs.reduce((s,c)=>s+c.prevTickets,0);
   const tC = cs.reduce((s,c)=>s+c.currTickets,0);
   const lanes = state.lanes;
-  const pctVol = tP > 0 ? Math.round((tC-tP)/tP*100) : null;
-  const tplP = lanes > 0 ? (tP/lanes).toFixed(2) : null;
-  const tplC = lanes > 0 ? (tC/lanes).toFixed(2) : null;
+  const pctVol = tP>0 ? Math.round((tC-tP)/tP*100) : null;
+  const tplP = lanes>0 ? (tP/lanes).toFixed(2) : null;
+  const tplC = lanes>0 ? (tC/lanes).toFixed(2) : null;
 
-  const byVolume = [...cs].sort((a,b)=>b.currTickets-a.currTickets);
-  const active = cs.filter(c=>c.prevTickets>0&&c.currTickets>0);
-  const newC = cs.filter(c=>c.prevTickets===0&&c.currTickets>0);
-  const exitC = cs.filter(c=>c.prevTickets>0&&c.currTickets===0);
+  const byVolume  = [...cs].sort((a,b)=>b.currTickets-a.currTickets);
+  const active    = cs.filter(c=>c.prevTickets>0&&c.currTickets>0);
+  const newC      = cs.filter(c=>c.prevTickets===0&&c.currTickets>0);
+  const exitC     = cs.filter(c=>c.prevTickets>0&&c.currTickets===0);
   const decliners = cs.filter(c=>c.currTickets<c.prevTickets&&c.prevTickets>0)
     .sort((a,b)=>(a.currTickets/a.prevTickets)-(b.currTickets/b.prevTickets));
-
   const topAbsGrower = [...active].sort((a,b)=>(b.currTickets-b.prevTickets)-(a.currTickets-a.prevTickets))[0];
   const topPctGrower = [...active].sort((a,b)=>((b.currTickets-b.prevTickets)/b.prevTickets)-((a.currTickets-a.prevTickets)/a.prevTickets))[0];
 
   const avgPMTTR = weightedAvg(cs,'prevMTTR','prevTickets');
   const avgCMTTR = weightedAvg(cs,'currMTTR','currTickets');
-  const mttrPct = avgPMTTR&&avgCMTTR ? Math.round((avgCMTTR-avgPMTTR)/avgPMTTR*100) : null;
-
+  const mttrPct  = avgPMTTR&&avgCMTTR ? Math.round((avgCMTTR-avgPMTTR)/avgPMTTR*100) : null;
   const avgPMTBF = weightedAvg(cs,'prevMTBF','prevTickets');
   const avgCMTBF = weightedAvg(cs,'currMTBF','currTickets');
-  const mtbfPct = avgPMTBF&&avgCMTBF ? Math.round((avgCMTBF-avgPMTBF)/avgPMTBF*100) : null;
+  const mtbfPct  = avgPMTBF&&avgCMTBF ? Math.round((avgCMTBF-avgPMTBF)/avgPMTBF*100) : null;
 
-  const causeMap = {};
-  cs.forEach(c=>Object.entries(c.currCauses||{}).forEach(([k,v])=>{ causeMap[k]=(causeMap[k]||0)+v; }));
-  const topCauses = Object.entries(causeMap).sort((a,b)=>b[1]-a[1]).slice(0,3);
-
-  const prevCauseMap = {};
-  cs.forEach(c=>Object.entries(c.prevCauses||{}).forEach(([k,v])=>{ prevCauseMap[k]=(prevCauseMap[k]||0)+v; }));
+  const causeMap={}, prevCauseMap={}, productMap={}, prevProductMap={}, regionMap={}, prevRegionMap={};
+  cs.forEach(c=>{
+    Object.entries(c.currCauses||{}).forEach(([k,v])=>{causeMap[k]=(causeMap[k]||0)+v;});
+    Object.entries(c.prevCauses||{}).forEach(([k,v])=>{prevCauseMap[k]=(prevCauseMap[k]||0)+v;});
+    Object.entries(c.currProduct||{}).forEach(([k,v])=>{productMap[k]=(productMap[k]||0)+v;});
+    Object.entries(c.prevProduct||{}).forEach(([k,v])=>{prevProductMap[k]=(prevProductMap[k]||0)+v;});
+    Object.entries(c.currRegion||{}).forEach(([k,v])=>{regionMap[k]=(regionMap[k]||0)+v;});
+    Object.entries(c.prevRegion||{}).forEach(([k,v])=>{prevRegionMap[k]=(prevRegionMap[k]||0)+v;});
+  });
+  const topCauses   = Object.entries(causeMap).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const topProducts = Object.entries(productMap).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const topRegions  = Object.entries(regionMap).sort((a,b)=>b[1]-a[1]).slice(0,3);
 
   const totalPWow = cs.reduce((s,c)=>s+(c.prevWow?.total||0),0);
   const totalCWow = cs.reduce((s,c)=>s+(c.currWow?.total||0),0);
   const wowRatioC = tC>0 ? (totalCWow/tC*100).toFixed(1) : null;
-  const wowPct = totalPWow>0 ? Math.round((totalCWow-totalPWow)/totalPWow*100) : null;
+  const wowPct    = totalPWow>0 ? Math.round((totalCWow-totalPWow)/totalPWow*100) : null;
+  const wowAgentMap={}, wowCauseMap={}, wowStatusMap={};
+  cs.forEach(c=>{
+    Object.entries(c.currWow?.agents||{}).forEach(([k,v])=>{wowAgentMap[k]=(wowAgentMap[k]||0)+v;});
+    Object.entries(c.currWow?.causes||{}).forEach(([k,v])=>{wowCauseMap[k]=(wowCauseMap[k]||0)+v;});
+    Object.entries(c.currWow?.status||{}).forEach(([k,v])=>{wowStatusMap[k]=(wowStatusMap[k]||0)+v;});
+  });
+  const topWowAgent  = Object.entries(wowAgentMap).sort((a,b)=>b[1]-a[1])[0];
+  const topWowCause  = Object.entries(wowCauseMap).sort((a,b)=>b[1]-a[1])[0];
+  const topWowStatus = Object.entries(wowStatusMap).sort((a,b)=>b[1]-a[1])[0];
 
   const sections = [];
+  const bullets  = [];
 
-  // ── 1. OVERVIEW ──
-  const volDir = pctVol>0 ? 'increased' : pctVol<0 ? 'decreased' : 'remained flat';
-  const volAdj = pctVol!=null ? (Math.abs(pctVol)>50?'significantly ':Math.abs(pctVol)>20?'notably ':'') : '';
-  let overview = `In ${cq}, the SeeTrue support team handled ${tC} ticket${tC!==1?'s':''} across ${cs.length} customer${cs.length!==1?'s':''}`;
-  if (pctVol!=null) overview += `, ${volAdj}${volDir} by ${Math.abs(pctVol)}% compared to ${tP} tickets in ${pq}`;
-  overview += '.';
-  if (tplC && tplP) {
-    const tplDir = parseFloat(tplC)>parseFloat(tplP) ? 'rising' : 'falling';
-    overview += `\n\nTickets per Lane (TPL) ${tplDir} from ${tplP} to ${tplC}, reflecting ${parseFloat(tplC)>parseFloat(tplP)?'higher':'lower'} support demand relative to the ${lanes}-lane customer base.`;
-  }
-  sections.push({ label:'Overview', text: overview });
-
-  // ── 2. CUSTOMER HIGHLIGHTS ──
-  let custText = '';
+  // ── 1. TICKET VOLUME ──
+  const volAdj = pctVol!=null?(Math.abs(pctVol)>50?'significantly ':Math.abs(pctVol)>20?'notably ':''):'';
+  const volDir = pctVol>0?'increased':pctVol<0?'decreased':'remained flat';
+  let volText = `In ${cq}, SeeTrue's support team handled ${tC} ticket${tC!==1?'s':''} across ${cs.length} customer${cs.length!==1?'s':''}`;
+  if (pctVol!=null) volText += `, ${volAdj}${volDir} by ${Math.abs(pctVol)}% compared to ${tP} in ${pq}`;
+  volText += '.';
+  if (tplC&&tplP) volText += ` The Tickets per Lane (TPL) ratio moved from ${tplP} to ${tplC} — ${parseFloat(tplC)>parseFloat(tplP)?`higher support demand per lane, meaning the team is absorbing more volume relative to the ${lanes}-lane base`:`lower support load per lane, a positive efficiency signal`}.`;
   if (byVolume.length>0) {
-    const top = byVolume[0];
-    custText += `${top.name} led in ticket volume this quarter with ${top.currTickets} tickets`;
-    if (top.prevTickets>0) {
-      const d=top.currTickets-top.prevTickets, p=Math.round(d/top.prevTickets*100);
-      custText += ` (${d>0?'+':''}${d} from ${pq}, ${p>0?'+':''}${p}%)`;
-    }
-    custText += '.';
+    const top=byVolume[0]; const d=top.currTickets-top.prevTickets;
+    volText += `\n\n${top.name} was the highest-volume customer with ${top.currTickets} tickets`;
+    if (top.prevTickets>0) volText += ` (${d>=0?'+':''}${d} vs ${pq}, ${Math.round(d/top.prevTickets*100)>=0?'+':''}${Math.round(d/top.prevTickets*100)}%)`;
+    volText += '.';
   }
-  if (topAbsGrower && topAbsGrower.name !== byVolume[0]?.name) {
-    const d = topAbsGrower.currTickets-topAbsGrower.prevTickets;
-    const p = Math.round(d/topAbsGrower.prevTickets*100);
-    custText += `\n\nThe largest absolute growth came from ${topAbsGrower.name} (+${d} tickets, +${p}%), growing from ${topAbsGrower.prevTickets} to ${topAbsGrower.currTickets}.`;
+  if (topAbsGrower&&topAbsGrower.name!==byVolume[0]?.name) {
+    const d=topAbsGrower.currTickets-topAbsGrower.prevTickets, p=Math.round(d/topAbsGrower.prevTickets*100);
+    volText += ` ${topAbsGrower.name} saw the largest absolute increase: +${d} tickets (+${p}%).`;
   }
-  if (topPctGrower && topPctGrower.name !== topAbsGrower?.name) {
-    const p = Math.round((topPctGrower.currTickets-topPctGrower.prevTickets)/topPctGrower.prevTickets*100);
-    custText += ` ${topPctGrower.name} saw the sharpest percentage increase at +${p}%.`;
+  if (topPctGrower&&topPctGrower.name!==topAbsGrower?.name) {
+    const p=Math.round((topPctGrower.currTickets-topPctGrower.prevTickets)/topPctGrower.prevTickets*100);
+    volText += ` ${topPctGrower.name} had the sharpest percentage growth at +${p}%.`;
   }
   if (decliners.length>0) {
-    const d = decliners[0];
-    const p = Math.abs(Math.round((d.currTickets-d.prevTickets)/d.prevTickets*100));
-    custText += `\n\nOn the positive side, ${d.name} reduced its ticket count by ${p}% (${d.prevTickets} → ${d.currTickets}), a sign of improving operational stability at that site.`;
-    if (decliners.length>1) custText += ` ${decliners.slice(1).map(c=>c.name).join(', ')} also saw reductions.`;
+    const d=decliners[0]; const p=Math.abs(Math.round((d.currTickets-d.prevTickets)/d.prevTickets*100));
+    volText += `\n\n${d.name} reduced tickets by ${p}% (${d.prevTickets} → ${d.currTickets})`;
+    if (decliners.length>1) volText += `, and ${decliners.slice(1).map(c=>c.name).join(', ')} also improved`;
+    volText += ' — positive signals worth highlighting to stakeholders.';
   }
-  if (newC.length>0) custText += `\n\nNew this quarter: ${newC.map(c=>c.name+' ('+c.currTickets+' tickets)').join(', ')}.`;
-  if (exitC.length>0) custText += `\n\n${exitC.map(c=>c.name).join(' and ')} had no tickets in ${cq}, compared to ${exitC.map(c=>c.prevTickets+' in '+pq).join(' and ')}.`;
-  if (custText) sections.push({ label:'Customer highlights', text: custText.trim() });
+  if (newC.length>0) volText += `\n\nNew this quarter: ${newC.map(c=>`${c.name} (${c.currTickets} tickets)`).join(', ')}.`;
+  if (exitC.length>0) volText += ` ${exitC.map(c=>c.name).join(' and ')} had no tickets in ${cq}.`;
+  sections.push({ label:'Ticket volume & TPL', text: volText.trim() });
 
-  // ── 3. SERVICE QUALITY ──
-  let sqText = '';
-  if (avgCMTTR!=null) {
+  // ── 2. MTTR ──
+  if (avgCMTTR!=null||avgPMTTR!=null) {
+    let mttrText = '';
     if (mttrPct!=null) {
-      const dir = mttrPct<0 ? `improved by ${Math.abs(mttrPct)}%` : `increased by ${mttrPct}%`;
-      const meaning = mttrPct<0 ? 'The team is resolving tickets faster — a positive outcome reflecting strong support execution.' : 'Resolution times are taking longer — worth reviewing workload distribution and escalation paths.';
-      sqText += `Mean Time to Resolution (MTTR) ${dir} quarter-over-quarter. The weighted average moved from ${avgPMTTR.toFixed(1)} hours in ${pq} to ${avgCMTTR.toFixed(1)} hours in ${cq}. ${meaning}`;
+      const dir   = mttrPct<0 ? `improved by ${Math.abs(mttrPct)}%` : `increased by ${mttrPct}%`;
+      const why   = mttrPct<0 ? 'faster resolution is a direct indicator of team efficiency and effective triage' : 'longer resolution times may reflect higher ticket complexity, staff capacity constraints, or escalation backlogs worth investigating';
+      mttrText += `Weighted average MTTR ${dir} quarter-over-quarter — from ${avgPMTTR.toFixed(1)}h in ${pq} to ${avgCMTTR.toFixed(1)}h in ${cq}. For context, ${why}.`;
     } else {
-      sqText += `The weighted average MTTR in ${cq} was ${avgCMTTR.toFixed(1)} hours.`;
+      mttrText += `The weighted average MTTR in ${cq} was ${avgCMTTR?.toFixed(1)||'N/A'}h.`;
     }
-  }
-  if (avgCMTBF!=null) {
-    if (sqText) sqText += '\n\n';
-    if (mtbfPct!=null) {
-      const dir = mtbfPct>0 ? `improved by ${mtbfPct}%` : `decreased by ${Math.abs(mtbfPct)}%`;
-      const meaning = mtbfPct>0 ? 'Customers are experiencing incidents less frequently, indicating improved system reliability.' : 'Incidents are occurring more frequently — this warrants a reliability review.';
-      sqText += `Mean Time Between Failures (MTBF) ${dir}. The weighted average moved from ${avgPMTBF.toFixed(1)} hours in ${pq} to ${avgCMTBF.toFixed(1)} hours in ${cq}. ${meaning}`;
-    } else {
-      sqText += `The weighted average MTBF in ${cq} was ${avgCMTBF.toFixed(1)} hours.`;
+    // Best improver
+    const improved = [...cs].filter(c=>c.prevMTTR!=null&&c.currMTTR!=null&&c.currMTTR<c.prevMTTR)
+      .sort((a,b)=>(a.currMTTR/a.prevMTTR)-(b.currMTTR/b.prevMTTR));
+    if (improved.length>0) {
+      const best=improved[0], p=Math.abs(Math.round((best.currMTTR-best.prevMTTR)/best.prevMTTR*100));
+      mttrText += `\n\n${best.name} showed the strongest improvement, cutting resolution time by ${p}% (${best.prevMTTR.toFixed(1)}h → ${best.currMTTR.toFixed(1)}h).`;
     }
+    // Worst deterioration
+    const worsened = [...cs].filter(c=>c.prevMTTR!=null&&c.currMTTR!=null&&c.currMTTR>c.prevMTTR)
+      .sort((a,b)=>(b.currMTTR/b.prevMTTR)-(a.currMTTR/a.prevMTTR));
+    if (worsened.length>0) {
+      const worst=worsened[0], p=Math.round((worst.currMTTR-worst.prevMTTR)/worst.prevMTTR*100);
+      mttrText += ` ${worst.name} saw the largest increase in resolution time (+${p}%, ${worst.prevMTTR.toFixed(1)}h → ${worst.currMTTR.toFixed(1)}h) — a candidate for focused attention next quarter.`;
+    }
+    const noData = cs.filter(c=>c.prevMTTR==null&&c.currMTTR==null);
+    if (noData.length>0) mttrText += `\n\nNote: no MTTR data was available for ${noData.map(c=>c.name).join(', ')}.`;
+    sections.push({ label:'MTTR — Mean Time to Resolution', text: mttrText.trim() });
   }
-  if (sqText) sections.push({ label:'Service quality', text: sqText.trim() });
 
-  // ── 4. ROOT CAUSES ──
-  if (topCauses.length>0) {
-    let causeText = `The top driver of support tickets in ${cq} was "${cap(topCauses[0][0])}" with ${topCauses[0][1]} occurrences`;
-    const prevTop = prevCauseMap[topCauses[0][0]] || 0;
-    if (prevTop>0) {
-      const dp = Math.round((topCauses[0][1]-prevTop)/prevTop*100);
-      causeText += ` (${dp>0?'+':''}${dp}% vs ${pq})`;
+  // ── 3. MTBF ──
+  if (avgCMTBF!=null||avgPMTBF!=null) {
+    let mtbfText = '';
+    if (mtbfPct!=null) {
+      const dir  = mtbfPct>0 ? `improved by ${mtbfPct}%` : `decreased by ${Math.abs(mtbfPct)}%`;
+      const why  = mtbfPct>0 ? 'customers are experiencing failures less frequently — a strong reliability signal' : 'incidents are occurring more often, indicating recurring system or process issues that need attention';
+      mtbfText += `Weighted average MTBF ${dir} quarter-over-quarter — from ${avgPMTBF.toFixed(1)}h in ${pq} to ${avgCMTBF.toFixed(1)}h in ${cq}. Higher MTBF is better, meaning ${why}.`;
+    } else {
+      mtbfText += `The weighted average MTBF in ${cq} was ${avgCMTBF?.toFixed(1)||'N/A'}h. (Higher = better — longer gaps between failures.)`;
     }
+    const highMTBF = [...cs].filter(c=>c.currMTBF!=null).sort((a,b)=>b.currMTBF-a.currMTBF);
+    if (highMTBF.length>0) mtbfText += `\n\n${highMTBF[0].name} had the highest MTBF at ${highMTBF[0].currMTBF.toFixed(1)}h — the longest average gap between incidents this quarter.`;
+    const lowMTBF = [...cs].filter(c=>c.currMTBF!=null).sort((a,b)=>a.currMTBF-b.currMTBF);
+    if (lowMTBF.length>0&&lowMTBF[0].name!==highMTBF[0]?.name) mtbfText += ` ${lowMTBF[0].name} had the lowest MTBF at ${lowMTBF[0].currMTBF.toFixed(1)}h, indicating the highest incident frequency.`;
+    const noMTBF = cs.filter(c=>c.currMTBF==null);
+    if (noMTBF.length>0) mtbfText += `\n\nNote: ${noMTBF.map(c=>c.name).join(', ')} could not be calculated (requires 2+ tickets with timestamps).`;
+    sections.push({ label:'MTBF — Mean Time Between Failures', text: mtbfText.trim() });
+  }
+
+  // ── 4. CAUSE OF ISSUE ──
+  if (topCauses.length>0) {
+    let causeText = `The leading cause of support tickets in ${cq} was "${cap(topCauses[0][0])}" with ${topCauses[0][1]} occurrence${topCauses[0][1]!==1?'s':''}`;
+    const prevTop=prevCauseMap[topCauses[0][0]]||0;
+    if (prevTop>0) { const dp=Math.round((topCauses[0][1]-prevTop)/prevTop*100); causeText+=` (${dp>=0?'+':''}${dp}% vs ${pq})`; }
     causeText += '.';
     if (topCauses.length>1) {
       causeText += ` This was followed by "${cap(topCauses[1][0])}" (${topCauses[1][1]} tickets)`;
       if (topCauses.length>2) causeText += ` and "${cap(topCauses[2][0])}" (${topCauses[2][1]} tickets)`;
       causeText += '.';
     }
-    causeText += `\n\nAddressing "${cap(topCauses[0][0])}" root causes through product improvements or operational changes represents the highest-leverage opportunity to reduce overall ticket volume.`;
-    sections.push({ label:'Root causes', text: causeText });
+    causeText += `\n\nAddressing "${cap(topCauses[0][0])}" through targeted product or process improvements represents the highest-leverage opportunity to reduce overall ticket volume.`;
+    if (topProducts.length>0) {
+      causeText += `\n\nBy product, "${cap(topProducts[0][0])}" generated the most tickets (${topProducts[0][1]})`;
+      const prevProd=prevProductMap[topProducts[0][0]]||0;
+      if (prevProd>0) { const dp=Math.round((topProducts[0][1]-prevProd)/prevProd*100); causeText+=` (${dp>=0?'+':''}${dp}% vs ${pq})`; }
+      causeText+='.';
+    }
+    if (topRegions.length>0) {
+      causeText += ` By region, "${cap(topRegions[0][0])}" had the highest ticket count (${topRegions[0][1]})`;
+      const prevReg=prevRegionMap[topRegions[0][0]]||0;
+      if (prevReg>0) { const dp=Math.round((topRegions[0][1]-prevReg)/prevReg*100); causeText+=` (${dp>=0?'+':''}${dp}% vs ${pq})`; }
+      causeText+='.';
+    }
+    sections.push({ label:'Cause of issue', text: causeText });
   }
 
   // ── 5. WOW 24x7 ──
   if (totalCWow>0||totalPWow>0) {
     let wowText = `The WOW 24x7 external helpdesk handled ${totalCWow} ticket${totalCWow!==1?'s':''} in ${cq}`;
-    if (wowRatioC) wowText += `, representing ${wowRatioC}% of total support volume`;
-    if (wowPct!=null) {
-      wowText += `. This is ${wowPct>0?'up '+wowPct+'% from':'down '+Math.abs(wowPct)+'% from'} ${totalPWow} tickets in ${pq}`;
-    }
+    if (wowRatioC) wowText += `, representing ${wowRatioC}% of all support volume this quarter`;
+    if (wowPct!=null) wowText += `. That is ${wowPct>=0?'up '+wowPct+'%':'down '+Math.abs(wowPct)+'%'} from ${totalPWow} tickets in ${pq}`;
     wowText += '.';
-    if (totalCWow>0) wowText += `\n\nThe WOW helpdesk continues to serve as a first-line buffer for after-hours and overflow support, ${parseFloat(wowRatioC||0)>20?'handling a substantial share of total volume — its contribution is meaningful to overall capacity.':'handling a portion of overall volume and extending coverage hours.'}`;
+    if (topWowAgent) wowText += ` The most active WOW agent was ${topWowAgent[0]} with ${topWowAgent[1]} ticket${topWowAgent[1]!==1?'s':''}`;
+    if (topWowCause) wowText += `, handling tickets predominantly categorised as "${cap(topWowCause[0])}" (${topWowCause[1]} tickets)`;
+    wowText += '.';
+    if (topWowStatus) wowText += `\n\nThe most common ticket status in WOW-handled tickets was "${cap(topWowStatus[0])}" (${topWowStatus[1]} tickets). ${parseFloat(wowRatioC||0)>20?'The WOW helpdesk is absorbing a substantial share of total volume and should be considered a key capacity lever in staffing plans.':'The WOW helpdesk is extending coverage hours and serving as a valuable overflow buffer.'}`;
     sections.push({ label:'WOW 24x7 helpdesk', text: wowText });
   }
 
-  // ── 6. TALKING POINTS ──
-  const bullets = [];
+  // ── TALKING POINTS ──
   if (pctVol!=null) {
-    if (pctVol>50) bullets.push({ text:`Ticket volume up ${pctVol}% — plan for continued capacity growth`, color:'red' });
-    else if (pctVol>0) bullets.push({ text:`Moderate growth of +${pctVol}% in ticket volume — within expected range`, color:'' });
-    else bullets.push({ text:`Ticket volume declined ${Math.abs(pctVol)}% — signals improved product/operational stability`, color:'green' });
+    if (pctVol>50) bullets.push({text:`Ticket volume up ${pctVol}% — capacity planning needed`,color:'red'});
+    else if (pctVol>0) bullets.push({text:`Volume grew +${pctVol}% — within expected range`,color:''});
+    else bullets.push({text:`Volume down ${Math.abs(pctVol)}% — improved product/operational stability`,color:'green'});
   }
-  if (topAbsGrower&&(topAbsGrower.currTickets-topAbsGrower.prevTickets)>0) bullets.push({ text:`${topAbsGrower.name}: biggest growth customer — worth a dedicated reliability review`, color:'amber' });
+  if (topAbsGrower&&(topAbsGrower.currTickets-topAbsGrower.prevTickets)>0) bullets.push({text:`${topAbsGrower.name}: highest growth — worth a reliability review`,color:'amber'});
+  if (decliners.length>0) bullets.push({text:`${decliners.map(c=>c.name).join(', ')} reduced tickets — success story`,color:'green'});
   if (mttrPct!=null) {
-    if (mttrPct<0) bullets.push({ text:`MTTR improved ${Math.abs(mttrPct)}% — team is resolving faster`, color:'green' });
-    else if (mttrPct>20) bullets.push({ text:`MTTR up ${mttrPct}% — review escalation paths and workload`, color:'red' });
+    if (mttrPct<0) bullets.push({text:`MTTR improved ${Math.abs(mttrPct)}% — team resolving faster`,color:'green'});
+    else if (mttrPct>20) bullets.push({text:`MTTR up ${mttrPct}% — review escalation paths`,color:'red'});
   }
   if (mtbfPct!=null) {
-    if (mtbfPct>0) bullets.push({ text:`MTBF up ${mtbfPct}% — fewer recurring incidents per customer`, color:'green' });
-    else bullets.push({ text:`MTBF down ${Math.abs(mtbfPct)}% — incidents recurring more frequently`, color:'red' });
+    if (mtbfPct>0) bullets.push({text:`MTBF up ${mtbfPct}% — fewer recurring incidents`,color:'green'});
+    else bullets.push({text:`MTBF down ${Math.abs(mtbfPct)}% — incidents recurring more often`,color:'red'});
   }
-  if (topCauses.length>0) bullets.push({ text:`Top issue: "${cap(topCauses[0][0])}" — highest-impact area for preventative action`, color:'amber' });
-  if (decliners.length>0) bullets.push({ text:`${decliners.map(c=>c.name).join(', ')} reduced tickets — highlight as success stories`, color:'green' });
-  if (newC.length>0) bullets.push({ text:`New customer${newC.length>1?'s':''} onboarded: ${newC.map(c=>c.name).join(', ')}`, color:'' });
+  if (topCauses.length>0) bullets.push({text:`Top cause: "${cap(topCauses[0][0])}" — highest-leverage fix`,color:'amber'});
+  if (topProducts.length>0) bullets.push({text:`Most affected product: "${cap(topProducts[0][0])}" (${topProducts[0][1]} tickets)`,color:'amber'});
+  if (totalCWow>0) bullets.push({text:`WOW handled ${wowRatioC}% of all tickets — ${parseFloat(wowRatioC||0)>20?'significant contributor':'useful overflow buffer'}`,color:''});
+  if (newC.length>0) bullets.push({text:`New customer${newC.length>1?'s':''}: ${newC.map(c=>c.name).join(', ')}`,color:''});
 
   return { sections, bullets };
 }
@@ -1871,59 +1910,91 @@ function buildGeminiPrompt() {
   const avgCMTBF = weightedAvg(cs,'currMTBF','currTickets');
   const totalPWow = cs.reduce((s,c)=>s+(c.prevWow?.total||0),0);
   const totalCWow = cs.reduce((s,c)=>s+(c.currWow?.total||0),0);
-  const causeMap = {}, prevCauseMap = {};
+  const wowRatio  = tC>0?(totalCWow/tC*100).toFixed(1)+'%':'N/A';
+
+  const causeMap={},prevCauseMap={},productMap={},prevProductMap={},regionMap={},prevRegionMap={};
+  const wowAgentMap={},wowCauseMap={},wowStatusMap={};
   cs.forEach(c=>{
-    Object.entries(c.currCauses||{}).forEach(([k,v])=>{ causeMap[k]=(causeMap[k]||0)+v; });
-    Object.entries(c.prevCauses||{}).forEach(([k,v])=>{ prevCauseMap[k]=(prevCauseMap[k]||0)+v; });
+    Object.entries(c.currCauses||{}).forEach(([k,v])=>{causeMap[k]=(causeMap[k]||0)+v;});
+    Object.entries(c.prevCauses||{}).forEach(([k,v])=>{prevCauseMap[k]=(prevCauseMap[k]||0)+v;});
+    Object.entries(c.currProduct||{}).forEach(([k,v])=>{productMap[k]=(productMap[k]||0)+v;});
+    Object.entries(c.prevProduct||{}).forEach(([k,v])=>{prevProductMap[k]=(prevProductMap[k]||0)+v;});
+    Object.entries(c.currRegion||{}).forEach(([k,v])=>{regionMap[k]=(regionMap[k]||0)+v;});
+    Object.entries(c.prevRegion||{}).forEach(([k,v])=>{prevRegionMap[k]=(prevRegionMap[k]||0)+v;});
+    Object.entries(c.currWow?.agents||{}).forEach(([k,v])=>{wowAgentMap[k]=(wowAgentMap[k]||0)+v;});
+    Object.entries(c.currWow?.causes||{}).forEach(([k,v])=>{wowCauseMap[k]=(wowCauseMap[k]||0)+v;});
+    Object.entries(c.currWow?.status||{}).forEach(([k,v])=>{wowStatusMap[k]=(wowStatusMap[k]||0)+v;});
   });
-  const topCauses = Object.entries(causeMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
 
   const sortedCust = [...cs].sort((a,b)=>b.currTickets-a.currTickets);
+  const topCauses   = Object.entries(causeMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const topProducts = Object.entries(productMap).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const topRegions  = Object.entries(regionMap).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const topWowAgent = Object.entries(wowAgentMap).sort((a,b)=>b[1]-a[1])[0];
+  const topWowCause = Object.entries(wowCauseMap).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const topWowStatus= Object.entries(wowStatusMap).sort((a,b)=>b[1]-a[1]).slice(0,3);
 
-  let dataBlock = `CONTEXT:\nSeeTrue is a technology company. Yoav leads the support team. This is a Quarterly Business Review (QBR) comparing ${pq} vs ${cq}.\n\n`;
-  dataBlock += `TICKET VOLUME:\n- ${pq}: ${tP} total tickets (TPL: ${tplP||'N/A'})\n- ${cq}: ${tC} total tickets (TPL: ${tplC||'N/A'})\n- Change: ${tP>0?((tC-tP)/tP*100).toFixed(0)+'%':'N/A'}\n- Total lanes: ${lanes}\n\n`;
+  let d = `CONTEXT: SeeTrue is a technology company. Yoav leads the support team. QBR comparing ${pq} vs ${cq}.\n\n`;
 
-  dataBlock += `PER-CUSTOMER BREAKDOWN (${cq} vs ${pq}):\n`;
-  sortedCust.forEach(c => {
-    const pct = c.prevTickets>0 ? ((c.currTickets-c.prevTickets)/c.prevTickets*100).toFixed(0)+'%' : c.currTickets>0?'NEW':'—';
-    dataBlock += `- ${c.name}: ${c.currTickets} tickets (${pq}: ${c.prevTickets}, change: ${pct})`;
-    if (c.currMTTR!=null) dataBlock += `, MTTR: ${c.currMTTR.toFixed(1)}h`;
-    dataBlock += '\n';
+  d += `--- TICKET VOLUME & TPL ---\n`;
+  d += `Total: ${pq}=${tP} tickets (TPL ${tplP||'N/A'}), ${cq}=${tC} tickets (TPL ${tplC||'N/A'}), change: ${tP>0?((tC-tP)/tP*100).toFixed(0)+'%':'N/A'}, lanes: ${lanes}\n`;
+  d += `Per customer (${cq} vs ${pq}, change):\n`;
+  sortedCust.forEach(c=>{
+    const pct=c.prevTickets>0?((c.currTickets-c.prevTickets)/c.prevTickets*100).toFixed(0)+'%':c.currTickets>0?'NEW':'—';
+    d+=`  ${c.name}: ${c.currTickets} (prev ${c.prevTickets}, ${pct})\n`;
   });
 
   if (avgCMTTR!=null||avgPMTTR!=null) {
-    dataBlock += `\nMTTR (Mean Time to Resolution, lower = better):\n- ${pq}: ${avgPMTTR!=null?avgPMTTR.toFixed(1)+'h':'N/A'}\n- ${cq}: ${avgCMTTR!=null?avgCMTTR.toFixed(1)+'h':'N/A'}\n`;
+    d += `\n--- MTTR (lower = better) ---\n`;
+    d += `Weighted avg: ${pq}=${avgPMTTR!=null?avgPMTTR.toFixed(1)+'h':'N/A'}, ${cq}=${avgCMTTR!=null?avgCMTTR.toFixed(1)+'h':'N/A'}\n`;
+    d += `Per customer (prev MTTR → curr MTTR):\n`;
+    sortedCust.forEach(c=>{if(c.prevMTTR!=null||c.currMTTR!=null) d+=`  ${c.name}: ${c.prevMTTR?.toFixed(1)||'N/A'}h → ${c.currMTTR?.toFixed(1)||'N/A'}h\n`;});
   }
+
   if (avgCMTBF!=null||avgPMTBF!=null) {
-    dataBlock += `\nMTBF (Mean Time Between Failures, higher = better):\n- ${pq}: ${avgPMTBF!=null?avgPMTBF.toFixed(1)+'h':'N/A'}\n- ${cq}: ${avgCMTBF!=null?avgCMTBF.toFixed(1)+'h':'N/A'}\n`;
+    d += `\n--- MTBF (higher = better) ---\n`;
+    d += `Weighted avg: ${pq}=${avgPMTBF!=null?avgPMTBF.toFixed(1)+'h':'N/A'}, ${cq}=${avgCMTBF!=null?avgCMTBF.toFixed(1)+'h':'N/A'}\n`;
+    d += `Per customer (prev MTBF → curr MTBF):\n`;
+    sortedCust.forEach(c=>{if(c.prevMTBF!=null||c.currMTBF!=null) d+=`  ${c.name}: ${c.prevMTBF?.toFixed(1)||'N/A'}h → ${c.currMTBF?.toFixed(1)||'N/A'}h\n`;});
   }
+
   if (topCauses.length>0) {
-    dataBlock += `\nTOP CAUSES OF ISSUE (${cq}):\n`;
-    topCauses.forEach(([k,v])=>{ dataBlock += `- ${cap(k)}: ${v} tickets (${pq}: ${prevCauseMap[k]||0})\n`; });
+    d += `\n--- CAUSE OF ISSUE (${cq} vs ${pq}) ---\n`;
+    topCauses.forEach(([k,v])=>{d+=`  ${cap(k)}: ${v} (prev ${prevCauseMap[k]||0})\n`;});
+    if (topProducts.length>0) { d+=`Top products: `; topProducts.forEach(([k,v])=>{d+=`${cap(k)} ${v} (prev ${prevProductMap[k]||0}), `;}); d+='\n'; }
+    if (topRegions.length>0)  { d+=`Top regions: `;  topRegions.forEach(([k,v])=>{d+=`${cap(k)} ${v} (prev ${prevRegionMap[k]||0}), `;}); d+='\n'; }
   }
+
   if (totalCWow>0||totalPWow>0) {
-    const wowRatio = tC>0?(totalCWow/tC*100).toFixed(1)+'%':'N/A';
-    dataBlock += `\nWOW 24x7 EXTERNAL HELPDESK:\n- ${pq}: ${totalPWow} tickets\n- ${cq}: ${totalCWow} tickets (${wowRatio} of total volume)\n`;
+    d += `\n--- WOW 24x7 HELPDESK ---\n`;
+    d += `Total: ${pq}=${totalPWow} tickets, ${cq}=${totalCWow} tickets (${wowRatio} of all volume)\n`;
+    if (topWowAgent) d+=`Top agent: ${topWowAgent[0]} (${topWowAgent[1]} tickets)\n`;
+    if (topWowCause.length>0) { d+=`Top causes: `; topWowCause.forEach(([k,v])=>{d+=`${cap(k)} ${v}, `;}); d+='\n'; }
+    if (topWowStatus.length>0){ d+=`Ticket status: `; topWowStatus.forEach(([k,v])=>{d+=`${cap(k)} ${v}, `;}); d+='\n'; }
   }
 
-  return `You are a senior business analyst writing an executive narrative for a QBR presentation. The audience is company stakeholders — not technical.
+  // Build the list of sections to generate based on available data
+  const sectionList = ['## Ticket volume & TPL'];
+  if (avgCMTTR!=null||avgPMTTR!=null) sectionList.push('## MTTR — Mean Time to Resolution');
+  if (avgCMTBF!=null||avgPMTBF!=null) sectionList.push('## MTBF — Mean Time Between Failures');
+  if (topCauses.length>0)             sectionList.push('## Cause of issue');
+  if (totalCWow>0||totalPWow>0)       sectionList.push('## WOW 24x7 helpdesk');
+  sectionList.push('## Key takeaways');
 
-${dataBlock}
+  return `You are a senior business analyst writing an executive narrative for a QBR presentation. Audience: company stakeholders, not technical.
+
+${d}
 INSTRUCTIONS:
-Write a professional, story-driven narrative with exactly these 5 section headers (use ## before each):
-## Overview
-## Customer highlights
-## Service quality
-## Root causes
-## Key takeaways
+Write one section for each of the following headers (use ## before each header exactly as written):
+${sectionList.join('\n')}
 
 Rules:
-- 3–5 sentences per section. Be specific with numbers.
-- Use plain business English — no jargon, no bullet points inside sections.
-- Interpret what the numbers mean for the business, not just describe them.
-- "Key takeaways" should be 3–4 punchy sentences a support leader would say out loud to a board.
-- If data is missing for a section (e.g. no MTTR), skip that metric gracefully.
-- Return ONLY the narrative. No preamble, no commentary, no markdown except the ## headers.`;
+- 3–5 sentences per section. Be specific with the numbers provided.
+- Plain business English — no bullet points, no jargon, no markdown inside paragraphs.
+- Interpret meaning, not just describe: explain why a number matters for the business.
+- "Key takeaways" = 3–4 punchy sentences a support leader would say out loud to a board.
+- Only generate sections for data that exists. Skip metrics gracefully if N/A.
+- Return ONLY the narrative text. No preamble, no sign-off, no markdown except the ## headers.`;
 }
 
 async function generateWithGemini() {
