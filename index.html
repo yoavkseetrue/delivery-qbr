@@ -139,6 +139,15 @@ td input.name-input { font-family: 'DM Sans', sans-serif; font-weight: 500; colo
 .story-pill.amber  { background: #FFF2CC; color: #7D5900; }
 .story-headline { font-size: 19px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
 .story-sub { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+.gemini-bar { display: flex; align-items: center; gap: 10px; padding: 12px 18px; background: linear-gradient(135deg,#E8F0FE,#F3E8FF); border-radius: var(--radius); border: 1px solid #C5D8FC; margin-bottom: 14px; flex-wrap: wrap; }
+.gemini-logo { font-size: 18px; flex-shrink: 0; }
+.gemini-label { font-size: 12px; font-weight: 600; color: #3C4ADB; flex-shrink: 0; }
+.gemini-key-input { flex: 1; min-width: 200px; padding: 7px 11px; border: 1px solid #C5D8FC; border-radius: var(--radius-sm); font-size: 13px; font-family: 'DM Mono', monospace; background: rgba(255,255,255,0.8); outline: none; }
+.gemini-key-input:focus { border-color: #3C4ADB; box-shadow: 0 0 0 3px rgba(60,74,219,0.1); }
+button.gemini { background: linear-gradient(135deg,#3C4ADB,#7C3AED); color: #fff; border: none; padding: 8px 18px; font-weight: 600; }
+button.gemini:hover { background: linear-gradient(135deg,#2F3BBA,#6B30CC); }
+button.gemini:disabled { opacity: 0.5; cursor: not-allowed; }
+.gemini-hint { font-size: 11px; color: #5A6A9A; width: 100%; margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -612,14 +621,25 @@ td input.name-input { font-family: 'DM Sans', sans-serif; font-weight: 500; colo
   <div id="tab-story" class="tab-pane">
     <div id="story-empty" class="empty-state"><div class="ei">✍</div><p>Load data on the <strong>Data</strong> tab first.</p></div>
     <div id="story-content" style="display:none">
+
+      <!-- Gemini API bar -->
+      <div class="gemini-bar">
+        <span class="gemini-logo">✦</span>
+        <span class="gemini-label">Gemini AI</span>
+        <input class="gemini-key-input" type="password" id="gemini-key" placeholder="Paste your Gemini API key…" oninput="saveGeminiKey(this.value)">
+        <button class="gemini" id="btn-gemini" onclick="generateWithGemini()">✦ Write with Gemini</button>
+        <span id="gemini-status" style="font-size:12px;color:#3C4ADB;font-weight:500"></span>
+        <div class="gemini-hint">Get a free key at <strong>aistudio.google.com</strong> → Get API key. Key is stored locally in your browser only.</div>
+      </div>
+
       <div class="card" style="margin-bottom:14px">
         <div class="section-header" style="margin-bottom:0">
           <div>
             <div class="story-headline" id="story-title"></div>
-            <div class="story-sub">Auto-generated from your data. Click any section to edit before presenting.</div>
+            <div class="story-sub" id="story-sub">Auto-generated from your data. Click any section to edit before presenting.</div>
           </div>
           <div style="display:flex;gap:8px;flex-shrink:0">
-            <button onclick="renderStory()">&#8635; Regenerate</button>
+            <button onclick="renderStory()" title="Regenerate rule-based version">&#8635; Regenerate</button>
             <button class="primary" onclick="copyStory()">&#9113; Copy all</button>
           </div>
         </div>
@@ -1794,8 +1814,160 @@ function copyStory() {
   });
 }
 
+// ── GEMINI INTEGRATION ─────────────────────────────────────────
+function saveGeminiKey(val) {
+  localStorage.setItem('qbr_gemini_key', val.trim());
+}
+function loadGeminiKey() {
+  const k = localStorage.getItem('qbr_gemini_key') || '';
+  if (k) document.getElementById('gemini-key').value = k;
+}
+
+function buildGeminiPrompt() {
+  const pq = state.prevQ, cq = state.currQ;
+  const cs = state.customers;
+  const tP = cs.reduce((s,c)=>s+c.prevTickets,0);
+  const tC = cs.reduce((s,c)=>s+c.currTickets,0);
+  const lanes = state.lanes;
+  const tplP = lanes>0?(tP/lanes).toFixed(2):null;
+  const tplC = lanes>0?(tC/lanes).toFixed(2):null;
+  const avgPMTTR = weightedAvg(cs,'prevMTTR','prevTickets');
+  const avgCMTTR = weightedAvg(cs,'currMTTR','currTickets');
+  const avgPMTBF = weightedAvg(cs,'prevMTBF','prevTickets');
+  const avgCMTBF = weightedAvg(cs,'currMTBF','currTickets');
+  const totalPWow = cs.reduce((s,c)=>s+(c.prevWow?.total||0),0);
+  const totalCWow = cs.reduce((s,c)=>s+(c.currWow?.total||0),0);
+  const causeMap = {}, prevCauseMap = {};
+  cs.forEach(c=>{
+    Object.entries(c.currCauses||{}).forEach(([k,v])=>{ causeMap[k]=(causeMap[k]||0)+v; });
+    Object.entries(c.prevCauses||{}).forEach(([k,v])=>{ prevCauseMap[k]=(prevCauseMap[k]||0)+v; });
+  });
+  const topCauses = Object.entries(causeMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  const sortedCust = [...cs].sort((a,b)=>b.currTickets-a.currTickets);
+
+  let dataBlock = `CONTEXT:\nSeeTrue is a technology company. Yoav leads the support team. This is a Quarterly Business Review (QBR) comparing ${pq} vs ${cq}.\n\n`;
+  dataBlock += `TICKET VOLUME:\n- ${pq}: ${tP} total tickets (TPL: ${tplP||'N/A'})\n- ${cq}: ${tC} total tickets (TPL: ${tplC||'N/A'})\n- Change: ${tP>0?((tC-tP)/tP*100).toFixed(0)+'%':'N/A'}\n- Total lanes: ${lanes}\n\n`;
+
+  dataBlock += `PER-CUSTOMER BREAKDOWN (${cq} vs ${pq}):\n`;
+  sortedCust.forEach(c => {
+    const pct = c.prevTickets>0 ? ((c.currTickets-c.prevTickets)/c.prevTickets*100).toFixed(0)+'%' : c.currTickets>0?'NEW':'—';
+    dataBlock += `- ${c.name}: ${c.currTickets} tickets (${pq}: ${c.prevTickets}, change: ${pct})`;
+    if (c.currMTTR!=null) dataBlock += `, MTTR: ${c.currMTTR.toFixed(1)}h`;
+    dataBlock += '\n';
+  });
+
+  if (avgCMTTR!=null||avgPMTTR!=null) {
+    dataBlock += `\nMTTR (Mean Time to Resolution, lower = better):\n- ${pq}: ${avgPMTTR!=null?avgPMTTR.toFixed(1)+'h':'N/A'}\n- ${cq}: ${avgCMTTR!=null?avgCMTTR.toFixed(1)+'h':'N/A'}\n`;
+  }
+  if (avgCMTBF!=null||avgPMTBF!=null) {
+    dataBlock += `\nMTBF (Mean Time Between Failures, higher = better):\n- ${pq}: ${avgPMTBF!=null?avgPMTBF.toFixed(1)+'h':'N/A'}\n- ${cq}: ${avgCMTBF!=null?avgCMTBF.toFixed(1)+'h':'N/A'}\n`;
+  }
+  if (topCauses.length>0) {
+    dataBlock += `\nTOP CAUSES OF ISSUE (${cq}):\n`;
+    topCauses.forEach(([k,v])=>{ dataBlock += `- ${cap(k)}: ${v} tickets (${pq}: ${prevCauseMap[k]||0})\n`; });
+  }
+  if (totalCWow>0||totalPWow>0) {
+    const wowRatio = tC>0?(totalCWow/tC*100).toFixed(1)+'%':'N/A';
+    dataBlock += `\nWOW 24x7 EXTERNAL HELPDESK:\n- ${pq}: ${totalPWow} tickets\n- ${cq}: ${totalCWow} tickets (${wowRatio} of total volume)\n`;
+  }
+
+  return `You are a senior business analyst writing an executive narrative for a QBR presentation. The audience is company stakeholders — not technical.
+
+${dataBlock}
+INSTRUCTIONS:
+Write a professional, story-driven narrative with exactly these 5 section headers (use ## before each):
+## Overview
+## Customer highlights
+## Service quality
+## Root causes
+## Key takeaways
+
+Rules:
+- 3–5 sentences per section. Be specific with numbers.
+- Use plain business English — no jargon, no bullet points inside sections.
+- Interpret what the numbers mean for the business, not just describe them.
+- "Key takeaways" should be 3–4 punchy sentences a support leader would say out loud to a board.
+- If data is missing for a section (e.g. no MTTR), skip that metric gracefully.
+- Return ONLY the narrative. No preamble, no commentary, no markdown except the ## headers.`;
+}
+
+async function generateWithGemini() {
+  const key = (document.getElementById('gemini-key').value || '').trim();
+  if (!key) {
+    document.getElementById('gemini-status').textContent = '⚠ Paste your API key first.';
+    document.getElementById('gemini-key').focus();
+    return;
+  }
+  const btn = document.getElementById('btn-gemini');
+  const status = document.getElementById('gemini-status');
+  btn.disabled = true;
+  btn.textContent = '⏳ Writing…';
+  status.textContent = '';
+
+  try {
+    const prompt = buildGeminiPrompt();
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.75, maxOutputTokens: 1800 }
+        })
+      }
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({}));
+      throw new Error(err?.error?.message || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!text) throw new Error('Empty response from Gemini.');
+
+    // Parse ## Section headers into individual sections
+    const raw = text.split(/^## /m).filter(Boolean);
+    const parsed = raw.map(chunk => {
+      const nl = chunk.indexOf('\n');
+      const label = nl > -1 ? chunk.slice(0, nl).trim() : chunk.trim();
+      const content = nl > -1 ? chunk.slice(nl+1).trim() : '';
+      return { label, text: content };
+    });
+
+    // Rebuild story body with Gemini text
+    const pq = state.prevQ, cq = state.currQ;
+    document.getElementById('story-title').textContent = `${pq} → ${cq} · Support Performance Narrative`;
+    document.getElementById('story-sub').textContent = 'Written by Gemini AI from your data. Click any section to edit.';
+    const body = document.getElementById('story-body');
+    body.innerHTML = parsed.map(s => `
+      <div class="card story-section">
+        <div class="story-section-label">${esc(s.label)}</div>
+        <textarea class="story-section-text" rows="${Math.max(3,Math.ceil(s.text.length/110))}" spellcheck="true">${esc(s.text)}</textarea>
+      </div>`).join('');
+
+    // Keep talking points from rule-based version
+    const { bullets } = generateNarrative();
+    document.getElementById('story-bullets').innerHTML = bullets.map(b =>
+      `<div style="padding:3px 0">
+        <span class="story-pill ${b.color}">${b.color==='green'?'↑':b.color==='red'?'↓':b.color==='amber'?'⚠':''} ${b.text.split(' — ')[0]}</span>
+        ${b.text.includes(' — ') ? '<span style="color:var(--text3);font-size:12px">— '+b.text.split(' — ')[1]+'</span>' : ''}
+      </div>`
+    ).join('');
+
+    status.textContent = '✓ Done';
+    setTimeout(()=>{ status.textContent=''; }, 3000);
+  } catch(e) {
+    status.innerHTML = `<span style="color:#991B1B">⚠ ${esc(e.message)}</span>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✦ Write with Gemini';
+  }
+}
+
 // ── INIT ───────────────────────────────────────────────────────
 loadFromStorage();
+loadGeminiKey();
 </script>
 </body>
 </html>
