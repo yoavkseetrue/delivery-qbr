@@ -1915,8 +1915,9 @@ async function generateWithGemini() {
   try {
     const prompt = buildGeminiPrompt();
     const model = document.getElementById('gemini-model').value;
+    const apiVersion = model.startsWith('gemini-2') ? 'v1beta' : 'v1';
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
+      `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
