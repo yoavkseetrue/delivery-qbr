@@ -201,7 +201,12 @@ button.gemini:disabled { opacity: 0.5; cursor: not-allowed; }
 
     <div class="card">
       <div class="card-title">Upload CSVs</div>
-      <div class="upload-grid">
+      <div class="btn-group" style="margin-bottom:14px">
+        <button id="mode-two" class="primary" onclick="setUploadMode('two')">Two files (prev + curr)</button>
+        <button id="mode-one" onclick="setUploadMode('one')">One file, split by date</button>
+      </div>
+
+      <div id="upload-two" class="upload-grid">
         <div>
           <label>Previous quarter CSV</label>
           <div class="drop-zone" id="drop-prev" onclick="document.getElementById('fp').click()">
@@ -221,6 +226,23 @@ button.gemini:disabled { opacity: 0.5; cursor: not-allowed; }
           <input type="file" id="fc" accept=".csv">
         </div>
       </div>
+
+      <div id="upload-one" style="display:none">
+        <div class="drop-zone" id="drop-single" onclick="document.getElementById('fs').click()" style="margin-bottom:14px">
+          <div class="drop-icon">↑</div>
+          <div class="drop-label" id="single-fname">Drop or click to upload combined CSV</div>
+          <div class="drop-sub">Rows are split into prev/curr by created_at_dt below</div>
+        </div>
+        <input type="file" id="fs" accept=".csv">
+        <div class="config-grid" style="grid-template-columns:1fr 1fr">
+          <div><label>Previous quarter start</label><input type="date" id="prev-start"></div>
+          <div><label>Previous quarter end</label><input type="date" id="prev-end"></div>
+          <div><label>Current quarter start</label><input type="date" id="curr-start"></div>
+          <div><label>Current quarter end</label><input type="date" id="curr-end"></div>
+        </div>
+        <div class="hint">Dates are inclusive, matched against each ticket's <code>created_at_dt</code>.</div>
+      </div>
+
       <div class="btn-group">
         <button class="primary" onclick="parseCSVs()">Parse CSVs</button>
         <span class="divider">— or —</span>
@@ -673,7 +695,8 @@ let state = { prevQ:'Q4 2025', currQ:'Q1 2026', lanes:200, excludeRemoved:true, 
 // customer shape: { name, prevTickets, currTickets, prevMTTR, currMTTR, prevMTBF, currMTBF, prevCauses, currCauses }
 // MTTR/MTBF: null = no data. Causes: { bug: N, hardware: N, ... }
 
-let prevRaw = null, currRaw = null;
+let prevRaw = null, currRaw = null, singleRaw = null;
+let uploadMode = 'two';
 
 // ── CUSTOMER MAPPING ───────────────────────────────────────────
 const MAP = {
@@ -762,7 +785,9 @@ function setupDrop(zoneId, inputId, nameId, key) {
 function loadFile(file, zoneId, nameId, key) {
   if (!file) return;
   Papa.parse(file, { header:true, skipEmptyLines:true, complete: res => {
-    if (key === 'prev') prevRaw = res.data; else currRaw = res.data;
+    if (key === 'prev') prevRaw = res.data;
+    else if (key === 'curr') currRaw = res.data;
+    else singleRaw = res.data;
     document.getElementById(nameId).textContent = '✓ ' + file.name;
     const z = document.getElementById(zoneId);
     z.classList.add('done');
@@ -771,6 +796,38 @@ function loadFile(file, zoneId, nameId, key) {
 }
 setupDrop('drop-prev','fp','prev-fname','prev');
 setupDrop('drop-curr','fc','curr-fname','curr');
+setupDrop('drop-single','fs','single-fname','single');
+
+// ── UPLOAD MODE ────────────────────────────────────────────────
+function setUploadMode(mode) {
+  uploadMode = mode;
+  document.getElementById('mode-two').classList.toggle('primary', mode === 'two');
+  document.getElementById('mode-one').classList.toggle('primary', mode === 'one');
+  document.getElementById('upload-two').style.display = mode === 'two' ? '' : 'none';
+  document.getElementById('upload-one').style.display  = mode === 'one' ? '' : 'none';
+}
+
+// Split rows of a combined CSV into prev/curr buckets by created_at_dt, using inclusive date-input boundaries
+function splitByDate(data, prevStart, prevEnd, currStart, currEnd) {
+  const inRange = (d, start, end) => {
+    if (!d || isNaN(d)) return false;
+    if (start && d < start) return false;
+    if (end && d > end) return false;
+    return true;
+  };
+  const ps = prevStart ? new Date(prevStart + 'T00:00:00') : null;
+  const pe = prevEnd   ? new Date(prevEnd   + 'T23:59:59') : null;
+  const cs = currStart ? new Date(currStart + 'T00:00:00') : null;
+  const ce = currEnd   ? new Date(currEnd   + 'T23:59:59') : null;
+  const prev = [], curr = [];
+  (data||[]).forEach(r => {
+    const raw = r.created_at_dt || r.created_timedate || r.created_at;
+    const d = raw ? new Date(raw) : null;
+    if (inRange(d, ps, pe)) prev.push(r);
+    else if (inRange(d, cs, ce)) curr.push(r);
+  });
+  return { prev, curr };
+}
 
 // ── CSV PARSING ────────────────────────────────────────────────
 function processQuarter(data, excludeRemoved) {
@@ -841,8 +898,18 @@ function processQuarter(data, excludeRemoved) {
 }
 
 function parseCSVs() {
-  if (!prevRaw && !currRaw) { showErr('Upload at least one CSV first.'); return; }
   document.getElementById('upload-err').innerHTML = '';
+
+  if (uploadMode === 'one') {
+    if (!singleRaw) { showErr('Upload a combined CSV first.'); return; }
+    const prevStart = document.getElementById('prev-start').value, prevEnd = document.getElementById('prev-end').value;
+    const currStart = document.getElementById('curr-start').value, currEnd = document.getElementById('curr-end').value;
+    if (!prevStart && !prevEnd && !currStart && !currEnd) { showErr('Set at least one date range to split the combined CSV.'); return; }
+    const split = splitByDate(singleRaw, prevStart, prevEnd, currStart, currEnd);
+    prevRaw = split.prev; currRaw = split.curr;
+  }
+
+  if (!prevRaw && !currRaw) { showErr('Upload at least one CSV first.'); return; }
   const excludeRemoved = state.excludeRemoved;
   const unknown = new Set();
   // collect unknowns
