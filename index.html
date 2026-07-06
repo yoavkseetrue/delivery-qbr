@@ -192,6 +192,11 @@ button.gemini:disabled { opacity: 0.5; cursor: not-allowed; }
         <div><label>Current quarter</label><input type="text"  id="curr-q" value="Q1 2026" oninput="state.currQ=this.value"></div>
         <div><label>Total lanes ⚠</label><input type="number" id="lanes"  value="200" min="1" class="lanes-input" oninput="state.lanes=+this.value||200"></div>
       </div>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="exclude-rm" checked onchange="state.excludeRemoved=this.checked;saveToStorage();reparse();" style="width:15px;height:15px">
+        <label for="exclude-rm" style="margin:0;cursor:pointer">Exclude tickets marked "Remove from analytics"</label>
+      </div>
+      <div class="hint">Applies the CSV's <code>remove_from_analytics</code> column. Toggling re-parses the uploaded CSVs in place (no re-upload needed) — unless the page was reloaded, in which case re-upload to re-apply.</div>
     </div>
 
     <div class="card">
@@ -664,7 +669,7 @@ button.gemini:disabled { opacity: 0.5; cursor: not-allowed; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ── STATE ──────────────────────────────────────────────────────
-let state = { prevQ:'Q4 2025', currQ:'Q1 2026', lanes:200, customers:[] };
+let state = { prevQ:'Q4 2025', currQ:'Q1 2026', lanes:200, excludeRemoved:true, customers:[] };
 // customer shape: { name, prevTickets, currTickets, prevMTTR, currMTTR, prevMTBF, currMTBF, prevCauses, currCauses }
 // MTTR/MTBF: null = no data. Causes: { bug: N, hardware: N, ... }
 
@@ -729,6 +734,8 @@ function loadFromStorage() {
     document.getElementById('prev-q').value = state.prevQ || 'Q4 2025';
     document.getElementById('curr-q').value = state.currQ || 'Q1 2026';
     document.getElementById('lanes').value  = state.lanes || 200;
+    document.getElementById('exclude-rm').checked = state.excludeRemoved !== false;
+    state.excludeRemoved = state.excludeRemoved !== false;
     if (state.customers && state.customers.length) { renderDataTable(); enableTabs(); }
     document.getElementById('save-status').textContent = 'Loaded from storage';
   } catch(e) {}
@@ -766,9 +773,10 @@ setupDrop('drop-prev','fp','prev-fname','prev');
 setupDrop('drop-curr','fc','curr-fname','curr');
 
 // ── CSV PARSING ────────────────────────────────────────────────
-function processQuarter(data) {
+function processQuarter(data, excludeRemoved) {
   const tickets={}, mttrA={}, mttrN={}, ticketDates={}, causes={}, products={}, versions={}, regions={}, wow={};
   (data||[]).forEach(r => {
+    if (excludeRemoved && String(r.remove_from_analytics||'').toUpperCase() === 'TRUE') return;
     const name = norm(r.airport_code || r.organization);
     if (!name) return;
     tickets[name] = (tickets[name]||0) + 1;
@@ -835,13 +843,15 @@ function processQuarter(data) {
 function parseCSVs() {
   if (!prevRaw && !currRaw) { showErr('Upload at least one CSV first.'); return; }
   document.getElementById('upload-err').innerHTML = '';
+  const excludeRemoved = state.excludeRemoved;
   const unknown = new Set();
   // collect unknowns
   [...(prevRaw||[]), ...(currRaw||[])].forEach(r => {
+    if (excludeRemoved && String(r.remove_from_analytics||'').toUpperCase() === 'TRUE') return;
     const raw = r.airport_code || r.organization;
     if (raw && String(raw).trim() && !norm(raw)) unknown.add(String(raw).trim());
   });
-  const prev = processQuarter(prevRaw), curr = processQuarter(currRaw);
+  const prev = processQuarter(prevRaw, excludeRemoved), curr = processQuarter(currRaw, excludeRemoved);
   const names = [...new Set([...Object.keys(prev.tickets), ...Object.keys(curr.tickets)])];
   state.customers = names.map(n => ({
     name: n,
@@ -859,6 +869,11 @@ function parseCSVs() {
   document.getElementById('warn-box').innerHTML = unknown.size
     ? `<div class="warn-box">⚠ Unknown codes not grouped: <strong>${[...unknown].join(', ')}</strong>. Add to mapping or rename in the table.</div>` : '';
   renderDataTable(); enableTabs(); saveToStorage();
+}
+
+// Re-run parseCSVs against the already-uploaded raw CSVs (used when the exclude-removed toggle changes)
+function reparse() {
+  if (prevRaw || currRaw) parseCSVs();
 }
 
 function buildBlank() {
