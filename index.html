@@ -177,6 +177,7 @@ button.gemini:disabled { opacity: 0.5; cursor: not-allowed; }
   <button id="btn-mttr"    onclick="showTab('mttr')"    disabled>MTTR</button>
   <button id="btn-mtbf"    onclick="showTab('mtbf')"    disabled>MTBF</button>
   <button id="btn-causes"  onclick="showTab('causes')"  disabled>Cause of Issue</button>
+  <button id="btn-onsite"  onclick="showTab('onsite')"  disabled>On-Site Visits</button>
   <button id="btn-wow"     onclick="showTab('wow')"     disabled>WOW 24x7</button>
   <button id="btn-story"  onclick="showTab('story')"  disabled>&#9998; Story</button>
 </div>
@@ -544,6 +545,52 @@ button.gemini:disabled { opacity: 0.5; cursor: not-allowed; }
     </div>
   </div>
 
+  <!-- ── ON-SITE VISITS TAB ── -->
+  <div id="tab-onsite" class="tab-pane">
+    <div id="onsite-empty" class="empty-state"><div class="ei">🚗</div><p>Load data on the <strong>Data</strong> tab first.</p></div>
+    <div id="onsite-content" style="display:none">
+      <details class="methodology">
+        <summary>How this is calculated</summary>
+        <div class="methodology-body">
+          <div class="method-item">
+            <div class="method-step">Step 1</div>
+            <div class="method-label">Identify on-site visits</div>
+            <div class="method-formula">resolution_code starts with "on-site"</div>
+            <div class="method-note">Any ticket whose resolution_code begins with on-site (e.g. on-site__cable_adjust/replacement) is counted as a physical site visit.</div>
+          </div>
+          <div class="method-arrow">→</div>
+          <div class="method-item">
+            <div class="method-step">Step 2</div>
+            <div class="method-label">Group by customer</div>
+            <div class="method-formula">COUNT(on-site tickets) per customer</div>
+            <div class="method-note">On-site % shows what share of a customer's tickets required a site visit.</div>
+          </div>
+          <div class="method-arrow">→</div>
+          <div class="method-item">
+            <div class="method-step">Step 3</div>
+            <div class="method-label">QoQ comparison</div>
+            <div class="method-formula">(curr − prev) ÷ prev × 100</div>
+            <div class="method-note">On-site visit volume is compared quarter-over-quarter.</div>
+          </div>
+        </div>
+      </details>
+
+      <div class="kpi-bar" id="onsite-kpi"></div>
+      <div class="card">
+        <div class="section-header"><h2>Per customer breakdown</h2></div>
+        <div class="table-wrap"><table>
+          <thead><tr id="onsite-thead"></tr></thead>
+          <tbody id="onsite-tbody"></tbody>
+          <tfoot><tr id="onsite-tfoot"></tr></tfoot>
+        </table></div>
+        <div class="dl-section">
+          <button class="primary" onclick="downloadOnsiteExcel()">&#8659; Download Excel</button>
+          <span class="dl-note" id="onsite-dl-note"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── WOW 24x7 TAB ── -->
   <div id="tab-wow" class="tab-pane">
     <div id="wow-empty" class="empty-state"><div class="ei">🤝</div><p>Load data on the <strong>Data</strong> tab first.</p></div>
@@ -724,7 +771,7 @@ function norm(raw) {
 }
 
 // ── TABS ───────────────────────────────────────────────────────
-const TAB_ORDER = ['data','tickets','mttr','mtbf','causes','wow','story'];
+const TAB_ORDER = ['data','tickets','mttr','mtbf','causes','onsite','wow','story'];
 function showTab(id) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-nav button').forEach((b,i) => b.classList.toggle('active', TAB_ORDER[i] === id));
@@ -733,11 +780,12 @@ function showTab(id) {
   if (id === 'mttr')    renderMTTR();
   if (id === 'mtbf')    renderMTBF();
   if (id === 'causes')  renderCauses();
+  if (id === 'onsite')  renderOnsite();
   if (id === 'wow')     renderWow();
   if (id === 'story')   renderStory();
 }
 function enableTabs() {
-  ['tickets','mttr','mtbf','causes','wow','story'].forEach(id => { document.getElementById('btn-' + id).disabled = false; });
+  ['tickets','mttr','mtbf','causes','onsite','wow','story'].forEach(id => { document.getElementById('btn-' + id).disabled = false; });
   const dlAll = document.getElementById('btn-dl-all');
   dlAll.disabled = false; dlAll.style.opacity = '1'; dlAll.style.cursor = 'pointer';
 }
@@ -769,7 +817,7 @@ function clearData() {
   state.customers = [];
   localStorage.removeItem('qbr_state');
   document.getElementById('data-table-card').style.display = 'none';
-  ['tickets','mttr','mtbf','causes','wow','story'].forEach(id => { document.getElementById('btn-' + id).disabled = true; });
+  ['tickets','mttr','mtbf','causes','onsite','wow','story'].forEach(id => { document.getElementById('btn-' + id).disabled = true; });
   const dlAll = document.getElementById('btn-dl-all');
   dlAll.disabled = true; dlAll.style.opacity = '0.5'; dlAll.style.cursor = 'not-allowed';
   document.getElementById('save-status').textContent = '';
@@ -831,8 +879,14 @@ function splitByDate(data, prevStart, prevEnd, currStart, currEnd) {
 }
 
 // ── CSV PARSING ────────────────────────────────────────────────
+// resolution_code values like "on-site__cable_adjust/replacement" mark a physical site visit
+function isOnsiteResolution(code) {
+  const c = String(code||'').toLowerCase().trim();
+  return c.startsWith('on-site') || c.startsWith('on_site') || c.startsWith('onsite');
+}
+
 function processQuarter(data, excludeRemoved) {
-  const tickets={}, mttrA={}, mttrN={}, ticketDates={}, causes={}, products={}, versions={}, regions={}, wow={};
+  const tickets={}, mttrA={}, mttrN={}, ticketDates={}, causes={}, products={}, versions={}, regions={}, wow={}, onsite={};
   (data||[]).forEach(r => {
     if (excludeRemoved && String(r.remove_from_analytics||'').toUpperCase() === 'TRUE') return;
     const name = norm(r.airport_code || r.organization);
@@ -881,6 +935,9 @@ function processQuarter(data, excludeRemoved) {
       if (cause)   wow[name].causes[cause]   = (wow[name].causes[cause]||0)+1;
       wow[name].agents[wowAgent] = (wow[name].agents[wowAgent]||0)+1;
     }
+
+    // On-site visits — resolution_code starting with "on-site"
+    if (isOnsiteResolution(r.resolution_code)) onsite[name] = (onsite[name]||0) + 1;
   });
 
   const mttr={}, mtbf={};
@@ -895,7 +952,7 @@ function processQuarter(data, excludeRemoved) {
     mtbf[n] = +((totalGap / (dates.length - 1)) / 3600000).toFixed(2); // ms → hours
   });
 
-  return { tickets, mttr, mtbf, causes, products, versions, regions, wow };
+  return { tickets, mttr, mtbf, causes, products, versions, regions, wow, onsite };
 }
 
 function parseCSVs() {
@@ -932,6 +989,7 @@ function parseCSVs() {
     prevRegion:  prev.regions[n]||{},  currRegion:  curr.regions[n]||{},
     prevWow: prev.wow[n] || { total: 0, status: {}, causes: {}, agents: {} },
     currWow: curr.wow[n] || { total: 0, status: {}, causes: {}, agents: {} },
+    prevOnsite: prev.onsite[n]||0, currOnsite: curr.onsite[n]||0,
   })).sort((a,b) => b.currTickets - a.currTickets);
 
   document.getElementById('warn-box').innerHTML = unknown.size
@@ -945,7 +1003,7 @@ function reparse() {
 }
 
 function buildBlank() {
-  state.customers = [{ name:'Customer 1', prevTickets:0, currTickets:0, prevMTTR:null, currMTTR:null, prevMTBF:null, currMTBF:null, prevCauses:{}, currCauses:{}, prevProduct:{}, currProduct:{}, prevVersion:{}, currVersion:{}, prevRegion:{}, currRegion:{}, prevWow:{total:0,status:{},causes:{},agents:{}}, currWow:{total:0,status:{},causes:{},agents:{}} }];
+  state.customers = [{ name:'Customer 1', prevTickets:0, currTickets:0, prevMTTR:null, currMTTR:null, prevMTBF:null, currMTBF:null, prevCauses:{}, currCauses:{}, prevProduct:{}, currProduct:{}, prevVersion:{}, currVersion:{}, prevRegion:{}, currRegion:{}, prevWow:{total:0,status:{},causes:{},agents:{}}, currWow:{total:0,status:{},causes:{},agents:{}}, prevOnsite:0, currOnsite:0 }];
   document.getElementById('warn-box').innerHTML = '';
   renderDataTable(); enableTabs();
 }
@@ -1078,6 +1136,51 @@ function renderTickets() {
     `<td>Total</td><td>${tP}</td><td>${tC}</td><td>${lanes}</td><td>${tplP}</td><td>${tplC}</td><td>${pctStr}</td>`;
 }
 
+// ── ON-SITE VISITS ─────────────────────────────────────────────
+function renderOnsite() {
+  const has = state.customers.length > 0;
+  document.getElementById('onsite-empty').style.display   = has ? 'none'  : 'block';
+  document.getElementById('onsite-content').style.display = has ? 'block' : 'none';
+  if (!has) return;
+  const pq = state.prevQ, cq = state.currQ;
+  const oP = state.customers.reduce((s,c)=>s+(c.prevOnsite||0),0);
+  const oC = state.customers.reduce((s,c)=>s+(c.currOnsite||0),0);
+  const tP = state.customers.reduce((s,c)=>s+c.prevTickets,0);
+  const tC = state.customers.reduce((s,c)=>s+c.currTickets,0);
+  const pctNum = oP>0 ? Math.round((oC-oP)/oP*100) : null;
+  const pctStr = pctNum!=null ? (pctNum>0?'+':'')+pctNum+'%' : '—';
+  const pctCol = pctNum!=null ? (pctNum>0?'#991B1B':'#1D9E75') : 'var(--text2)';
+  const ratioC = tC>0 ? (oC/tC*100).toFixed(1)+'%' : '—';
+
+  document.getElementById('onsite-kpi').innerHTML = `
+    <div class="kpi"><div class="kpi-label">${pq} on-site visits</div><div class="kpi-val">${oP}</div></div>
+    <div class="kpi"><div class="kpi-label">${cq} on-site visits</div><div class="kpi-val">${oC}</div></div>
+    <div class="kpi"><div class="kpi-label">QoQ change</div><div class="kpi-val" style="color:${pctCol}">${pctStr}</div></div>
+    <div class="kpi"><div class="kpi-label">% of all tickets (${cq})</div><div class="kpi-val tpl">${ratioC}</div></div>`;
+
+  document.getElementById('onsite-thead').innerHTML = `
+    <th style="text-align:left;min-width:140px">Customer</th>
+    <th>${pq} Tickets</th><th>${pq} On-Site</th><th>${pq} On-Site %</th>
+    <th>${cq} Tickets</th><th>${cq} On-Site</th><th>${cq} On-Site %</th>
+    <th>% Change</th>`;
+
+  const sorted = [...state.customers].sort((a,b)=>(b.currOnsite||0)-(a.currOnsite||0));
+  document.getElementById('onsite-tbody').innerHTML = sorted.map(c => {
+    const pOn = c.prevOnsite||0, cOn = c.currOnsite||0;
+    const pPct = c.prevTickets>0 ? (pOn/c.prevTickets*100).toFixed(1)+'%' : '—';
+    const cPct = c.currTickets>0 ? (cOn/c.currTickets*100).toFixed(1)+'%' : '—';
+    return `<tr>
+      <td style="font-weight:500">${esc(c.name)}</td>
+      <td class="mono" style="color:var(--text2)">${c.prevTickets}</td><td class="mono">${pOn}</td><td class="mono" style="color:var(--text3)">${pPct}</td>
+      <td class="mono" style="color:var(--text2)">${c.currTickets}</td><td class="mono">${cOn}</td><td class="mono" style="color:var(--text3)">${cPct}</td>
+      <td>${pctBadge(pOn,cOn)}</td>
+    </tr>`;
+  }).join('');
+  const pRatio = tP>0 ? (oP/tP*100).toFixed(1)+'%' : '—';
+  document.getElementById('onsite-tfoot').innerHTML =
+    `<td>Total</td><td>${tP}</td><td>${oP}</td><td>${pRatio}</td><td>${tC}</td><td>${oC}</td><td>${ratioC}</td><td>${pctStr}</td>`;
+}
+
 // ── MTTR ───────────────────────────────────────────────────────
 function renderMTTR() {
   const has = state.customers.length > 0;
@@ -1198,6 +1301,34 @@ function downloadTicketsExcel() {
   const fname=`Ticket_Volume_${pq.replace(/\s/g,'_')}_vs_${cq.replace(/\s/g,'_')}.xlsx`;
   XLSX.writeFile(wb,fname);
   document.getElementById('tickets-dl-note').textContent=fname+' downloaded.';
+}
+
+function downloadOnsiteExcel() {
+  const pq=state.prevQ, cq=state.currQ;
+  const wb=XLSX.utils.book_new();
+  const hdr=['Customer',`${pq} Tickets`,`${pq} On-Site`,`${pq} On-Site %`,`${cq} Tickets`,`${cq} On-Site`,`${cq} On-Site %`,'% Change'];
+  const rows=[...state.customers].sort((a,b)=>(b.currOnsite||0)-(a.currOnsite||0)).map(c=>{
+    const pOn=c.prevOnsite||0, cOn=c.currOnsite||0;
+    const pPct=c.prevTickets>0?+(pOn/c.prevTickets*100).toFixed(1):'';
+    const cPct=c.currTickets>0?+(cOn/c.currTickets*100).toFixed(1):'';
+    let pct='';
+    if(pOn===0&&cOn>0) pct='NEW';
+    else if(cOn===0&&pOn>0) pct='EXITED';
+    else if(pOn>0) pct=(cOn>pOn?'+':'')+Math.round((cOn-pOn)/pOn*100)+'%';
+    return [c.name,c.prevTickets,pOn,pPct,c.currTickets,cOn,cPct,pct];
+  });
+  const tP=state.customers.reduce((s,c)=>s+c.prevTickets,0);
+  const tC=state.customers.reduce((s,c)=>s+c.currTickets,0);
+  const oP=state.customers.reduce((s,c)=>s+(c.prevOnsite||0),0);
+  const oC=state.customers.reduce((s,c)=>s+(c.currOnsite||0),0);
+  const pctS=oP>0?(oC>=oP?'+':'')+Math.round((oC-oP)/oP*100)+'%':'—';
+  rows.push(['Total',tP,oP,tP>0?+(oP/tP*100).toFixed(1):'',tC,oC,tC>0?+(oC/tC*100).toFixed(1):'',pctS]);
+  const ws=XLSX.utils.aoa_to_sheet([hdr,...rows]);
+  ws['!cols']=[22,13,12,13,13,12,13,11].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws,'On-Site Visits');
+  const fname=`OnSite_Visits_${pq.replace(/\s/g,'_')}_vs_${cq.replace(/\s/g,'_')}.xlsx`;
+  XLSX.writeFile(wb,fname);
+  document.getElementById('onsite-dl-note').textContent=fname+' downloaded.';
 }
 
 function downloadMTTRExcel() {
@@ -1612,6 +1743,26 @@ function downloadAllExcel() {
   const mtbfWs=XLSX.utils.aoa_to_sheet([mtbfHdr,...mtbfRows]);
   mtbfWs['!cols']=[22,13,16,13,16,14].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb,mtbfWs,'MTBF Per Customer');
+
+  // ── Sheet: On-Site Visits Per Customer ──
+  const onsiteHdr=['Customer',`${pq} Tickets`,`${pq} On-Site`,`${pq} On-Site %`,`${cq} Tickets`,`${cq} On-Site`,`${cq} On-Site %`,'% Change'];
+  const onsiteRows=[...state.customers].sort((a,b)=>(b.currOnsite||0)-(a.currOnsite||0)).map(c=>{
+    const pOn=c.prevOnsite||0, cOn=c.currOnsite||0;
+    const pPct=c.prevTickets>0?+(pOn/c.prevTickets*100).toFixed(1):'';
+    const cPct=c.currTickets>0?+(cOn/c.currTickets*100).toFixed(1):'';
+    let pct='';
+    if(pOn===0&&cOn>0) pct='NEW';
+    else if(cOn===0&&pOn>0) pct='EXITED';
+    else if(pOn>0) pct=(cOn>pOn?'+':'')+Math.round((cOn-pOn)/pOn*100)+'%';
+    return [c.name,c.prevTickets,pOn,pPct,c.currTickets,cOn,cPct,pct];
+  });
+  const oP=state.customers.reduce((s,c)=>s+(c.prevOnsite||0),0);
+  const oC=state.customers.reduce((s,c)=>s+(c.currOnsite||0),0);
+  const onsitePctS=oP>0?(oC>=oP?'+':'')+Math.round((oC-oP)/oP*100)+'%':'—';
+  onsiteRows.push(['Total',tP,oP,tP>0?+(oP/tP*100).toFixed(1):'',tC,oC,tC>0?+(oC/tC*100).toFixed(1):'',onsitePctS]);
+  const onsiteWs=XLSX.utils.aoa_to_sheet([onsiteHdr,...onsiteRows]);
+  onsiteWs['!cols']=[22,13,12,13,13,12,13,11].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,onsiteWs,'On-Site Visits');
 
   // ── Sheets 5–12: Cause / Product / Version / Region ──
   const dims=[
