@@ -701,23 +701,24 @@ let uploadMode = 'two';
 // ── CUSTOMER MAPPING ───────────────────────────────────────────
 const MAP = {
   'rail_il':'Rail IL','rail-hashalom':'Rail IL','rail-jerusalem':'Rail IL',
-  'camry':'Camry','camry__dla':'Camry',
-  'hermes':'Hermes','pfo':'Hermes','lca':'Hermes','nsi':'Hermes',
+  'camry':'Camry','camry__dla':'Camry','dla':'Camry','nsi':'Camry',
+  'hermes':'Hermes','pfo':'Hermes','lca':'Hermes',
   'charleroi':'Charleroi','dfw':'DFW',
   'gt':'GT','gt__new_york':'GT','gt__new_york_newark':'GT','gt__madrid':'GT',
   'gt__paris':'GT','gt__london-luton':'GT','gt__barcelona':'GT','gt__prague':'GT',
-  'delta':'Delta','delta_airlines':'Delta','dla':'Delta',
+  'delta':'Delta','delta_airlines':'Delta',
   'sin':'Changi','changi':'Changi',
   'barclays':'Barclays','jfk':'JFK','pmo':'PMO','genoa':'Genoa',
   'guatemala':'Guatemala','punta_cana':'Punta Cana','maale_adumim':'Maale Adumim',
   'shikun-binui':'Shikun Binui','maman':'Maman','mivdaka_':'Mivdaka',
+  'chevron':'Chevron',
 };
 function norm(raw) {
   if (!raw) return null;
   const c = String(raw).toLowerCase().trim();
   if (MAP[c]) return MAP[c];
   if (c.startsWith('rail')) return 'Rail IL';
-  if (c.startsWith('gt__')) return 'GT';
+  if (c.startsWith('gt_')) return 'GT';
   if (c.startsWith('camry__')) return 'Camry';
   return null;
 }
