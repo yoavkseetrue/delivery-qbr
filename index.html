@@ -213,7 +213,7 @@ button.gemini:disabled { opacity: 0.5; cursor: not-allowed; }
           <div class="drop-zone" id="drop-prev" onclick="document.getElementById('fp').click()">
             <div class="drop-icon">↑</div>
             <div class="drop-label" id="prev-fname">Drop or click to upload</div>
-            <div class="drop-sub">airport_code + ticket_id required</div>
+            <div class="drop-sub">organization or airport_code + ticket_id</div>
           </div>
           <input type="file" id="fp" accept=".csv">
         </div>
@@ -222,7 +222,7 @@ button.gemini:disabled { opacity: 0.5; cursor: not-allowed; }
           <div class="drop-zone" id="drop-curr" onclick="document.getElementById('fc').click()">
             <div class="drop-icon">↑</div>
             <div class="drop-label" id="curr-fname">Drop or click to upload</div>
-            <div class="drop-sub">airport_code + ticket_id required</div>
+            <div class="drop-sub">organization or airport_code + ticket_id</div>
           </div>
           <input type="file" id="fc" accept=".csv">
         </div>
@@ -759,11 +759,24 @@ const MAP = {
   'guatemala':'Guatemala','punta_cana':'Punta Cana','maale_adumim':'Maale Adumim',
   'shikun-binui':'Shikun Binui','maman':'Maman','mivdaka_':'Mivdaka',
   'chevron':'Chevron',
+  'dfwairport':'DFW','singapore':'Changi','gt-hbs':'GT',
+  'clt - charlotte airport':'CLT','brinks_ny':'Brinks','hong_kong':'Hong Kong',
 };
+// Customer identifier for a ticket row. New export format: use `organization`, unless it is
+// blank, numeric or "SeeTrue" (our own org) — then fall back to the old-format `airport_code`.
+function customerKey(r) {
+  const org = String(r.organization || '').trim();
+  // all-digit orgs are raw Zendesk IDs (org name not set), so treat them as missing
+  if (org && org.toLowerCase() !== 'seetrue' && !/^\d+$/.test(org)) return org;
+  return r.airport_code;
+}
 function norm(raw) {
   if (!raw) return null;
   const c = String(raw).toLowerCase().trim();
   if (MAP[c]) return MAP[c];
+  const u = c.replace(/\s+/g, '_'), h = c.replace(/\s+/g, '-');  // "Punta Cana" -> punta_cana
+  if (MAP[u]) return MAP[u];
+  if (MAP[h]) return MAP[h];
   if (c.startsWith('rail')) return 'Rail IL';
   if (c.startsWith('gt_')) return 'GT';
   if (c.startsWith('camry__')) return 'Camry';
@@ -889,7 +902,7 @@ function processQuarter(data, excludeRemoved) {
   const tickets={}, mttrA={}, mttrN={}, ticketDates={}, causes={}, products={}, versions={}, regions={}, wow={}, onsite={};
   (data||[]).forEach(r => {
     if (excludeRemoved && String(r.remove_from_analytics||'').toUpperCase() === 'TRUE') return;
-    const name = norm(r.airport_code || r.organization);
+    const name = norm(customerKey(r));
     if (!name) return;
     tickets[name] = (tickets[name]||0) + 1;
 
@@ -973,7 +986,7 @@ function parseCSVs() {
   // collect unknowns
   [...(prevRaw||[]), ...(currRaw||[])].forEach(r => {
     if (excludeRemoved && String(r.remove_from_analytics||'').toUpperCase() === 'TRUE') return;
-    const raw = r.airport_code || r.organization;
+    const raw = customerKey(r);
     if (raw && String(raw).trim() && !norm(raw)) unknown.add(String(raw).trim());
   });
   const prev = processQuarter(prevRaw, excludeRemoved), curr = processQuarter(currRaw, excludeRemoved);
